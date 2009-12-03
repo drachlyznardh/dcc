@@ -1,0 +1,16 @@
+program
+
+   var x : int;
+   var y : int
+
+
+begin
+
+   x := 40;
+   ^p := x;
+   y := @p;
+
+   write(x);
+   write(y)
+
+end
