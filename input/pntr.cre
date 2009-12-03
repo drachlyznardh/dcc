@@ -1,13 +1,13 @@
 program
 
    var x : int;
-   var y : int
-
+   var y : int;
+   var p : ^^int
 
 begin
 
    x := 40;
-   ^p := x;
+   p := ^x;
    y := @p;
 
    write(x);

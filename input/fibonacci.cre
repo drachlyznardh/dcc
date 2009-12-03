@@ -1,4 +1,5 @@
 program
+
    var x : int;
    var fib0 : int;
    var fib1 : int;

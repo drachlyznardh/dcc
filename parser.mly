@@ -50,7 +50,12 @@ dec
 gType
     : bType                                       { Basic($1) }
     | ARRAY LBRACKET NAT DOTS NAT RBRACKET OF bType { Vector($8,$3,$5) }
+    | pType										  { Pointer($1) }
     ;
+
+pType
+	: bType										  { SPointer($1) }
+	| CARET pType								  { MPointer($2) }
 
 bType
     : INT                                         { Int }
@@ -132,12 +137,22 @@ bexp
     | bexp_term                                   { $1 }
     ;
    
+rexp_factor
+	: CARET ide									  { Sref($2) }
+    | CARET rexp_factor							  { Mref($2) }
+    
+dexp_factor
+	: AT ide									  { Sunref($2) }
+	| AT dexp_factor							  { Munref($2) }
+
 aexp_factor
     : NAT                                         { N($1) }
     | REAL                                        { R($1) }
     | ide                                         { Ident($1) }
     | ide LBRACKET aexp RBRACKET                  { Vec($1,$3) }
     | LP aexp RP                                  { $2 }
+    | rexp_factor								  { Ref($1) }
+    | dexp_factor								  { Deref($1) }
     ;
 
 aexp_term
