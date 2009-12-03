@@ -19,7 +19,7 @@ type store =
 type env_entry =
 	  Var of loc					(* Location, variable *)
 	| Val of value					(* Value, constant *)
-	| Descr_Pntr of loc					(* Pointer to heap location *)
+	| Descr_Pntr of loc				(* Pointer to heap location *)
 	| Descr_Vector of
 		loc * int * int				(* Vector with start point, lower and upper bounds *)
 	| Descr_Procedure of
@@ -43,6 +43,7 @@ exception DIFFERENT_TYPE_OPERATION
 exception DIFFERENT_TYPE_ASSIGNATION
 exception PARAMETERS_DO_NOT_MATCH
 
+exception NO_HEAP					(* Heap non existent *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 
 (******************************)
@@ -52,11 +53,21 @@ exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 (* utility functions *)
 let initenv (x:ide):env_entry = raise NO_IDE
 let initmem (x:loc):value = raise NO_MEM
+let initheap (x:loc):heap_entry = raise NO_HEAP
+
 let updatemem ((s:store), addr, (v:value)) :store = function
     x -> if (x = addr) then v else s(x)
 
 let updateenv ((e:env),id, (v:env_entry)) :env = function
     y -> if (y = id) then v else e(y)
+
+let newheap (h: heap) : int =
+	let rec aux n =
+		try (
+			let _ = h(Loc(n))
+			in aux (n+1)
+		) with NO_HEAP -> n
+	in aux 0
 
 let newmem (s: store) : int =   
     let rec aux n =
