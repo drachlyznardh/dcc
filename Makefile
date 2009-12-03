@@ -1,17 +1,29 @@
+
+YACC := ocamlyacc
+LEX  := ocamllex
+CC   := ocamlc
+
+APP  := interpreter
+
 eval:
-	ocamlc -c syntaxtree.ml
-	ocamlyacc parser.mly
-	ocamlc -c parser.mli	
-	ocamlc -c parser.ml	
-	ocamllex lexer.mll
-	ocamlc -c lexer.ml
-	ocamlc -c interpreter.ml
-	ocamlc -c main.ml	
-	ocamlc -o interpreter lexer.cmo parser.cmo syntaxtree.cmo interpreter.cmo main.cmo
+	$(CC) -c syntaxtree.ml
+	$(YACC) parser.mly
+	$(CC) -c parser.mli	
+	$(CC) -c parser.ml	
+	$(LEX) lexer.mll
+	$(CC) -c lexer.ml
+	$(CC) -c interpreter.ml
+	$(CC) -c main.ml	
+	$(CC) -o $(APP) lexer.cmo parser.cmo syntaxtree.cmo interpreter.cmo main.cmo
+
+test:
+	./test.sh
 
 clean:
 	rm -f parser.mli parser.ml lexer.ml *.cmo *.cmi *~
 
 veryclean:
 	rm -f parser.mli parser.ml lexer.ml *.cmo *.cmi *~
-	rm interpreter
+	rm $(APP)
+
+.PHONY: test clean veryclean

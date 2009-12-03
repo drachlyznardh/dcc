@@ -18,5 +18,5 @@ in
               Program(d,p,c) ->
                  print_string ">>> The program is syntactically correct!\n";
                  run absyntaxtree
-            | Null -> print_string ("Errore sintattico alla riga " ^ (string_of_int lexbuf.lex_start_p.pos_lnum)); initmem
+            | Null -> print_string ("Errore sintattico alla riga " ^ (string_of_int lexbuf.lex_start_p.pos_lnum) ^ "\n"); exit 1
         );;

@@ -19,7 +19,7 @@ type store =
 type env_entry =
 	  Var of loc					(* Location, variable *)
 	| Val of value					(* Value, constant *)
-	| Pntr of loc					(* Pointer to heap location *)
+	| Descr_Pntr of loc					(* Pointer to heap location *)
 	| Descr_Vector of
 		loc * int * int				(* Vector with start point, lower and upper bounds *)
 	| Descr_Procedure of
