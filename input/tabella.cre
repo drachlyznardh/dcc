@@ -1,0 +1,12 @@
+program
+	var f : float
+
+begin
+	f := 32.0;
+	while f <= 212.0 do
+		begin
+			write(f);
+			write((f - 32.0) / 1.8);
+			f := f + 10.0
+		end
+end

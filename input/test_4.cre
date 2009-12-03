@@ -1,0 +1,14 @@
+program
+
+   var x : int;
+   var y : int
+
+begin
+   for x:= 1 to 10 do begin
+      y := x/2;
+      if (y*2 = x) then begin
+         write(x)
+      end
+      else begin end
+   end
+end

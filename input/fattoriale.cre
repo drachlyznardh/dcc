@@ -1,0 +1,15 @@
+program
+    var n : int;
+    var fatt : int;
+    var conta : int
+
+begin
+    n := 8;
+    conta := 0;
+    fatt := 1;
+    if (n < 1) then
+        fatt := 0
+    else
+        for conta := 1 to n do fatt := fatt * conta;
+    write(fatt)
+end

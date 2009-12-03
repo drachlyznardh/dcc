@@ -1,0 +1,17 @@
+program
+
+    var fact : int;
+    var i : int;
+    var x : int
+
+begin
+    fact := 1;
+    x := 5;
+    i := 1;
+    while (i<=x) do begin
+        write(i);
+        fact := fact * i;
+        i := i+1
+    end;
+    write(fact)
+end

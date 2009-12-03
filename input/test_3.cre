@@ -1,0 +1,21 @@
+program
+
+   var x : int;
+   var y : int;
+   var z : int;
+   var h : int
+
+begin
+   x := 0;
+   y := 3;
+   if (x<y) then begin
+      z := 1;
+      h := 0
+   end
+   else begin
+      z := 0;
+      h := 1
+   end;
+   write(z);
+   write(h)
+end
