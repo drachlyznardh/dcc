@@ -53,7 +53,7 @@ exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 (* utility functions *)
 let initenv (x:ide):env_entry = raise NO_IDE
 let initmem (x:loc):value = raise NO_MEM
-let initheap (x:loc):heap_entry = raise NO_HEAP
+let initheap (x:loc):heap_entry = raise NO_HEAP		(* Initial empty Heap *)
 
 let updatemem ((s:store), addr, (v:value)) :store = function
     x -> if (x = addr) then v else s(x)
@@ -61,6 +61,7 @@ let updatemem ((s:store), addr, (v:value)) :store = function
 let updateenv ((e:env),id, (v:env_entry)) :env = function
     y -> if (y = id) then v else e(y)
 
+(*
 let newheap (h: heap) : int =
 	let rec aux n =
 		try (
@@ -68,6 +69,7 @@ let newheap (h: heap) : int =
 			in aux (n+1)
 		) with NO_HEAP -> n
 	in aux 0
+*)
 
 let newmem (s: store) : int =   
     let rec aux n =
@@ -171,6 +173,10 @@ let rec dec_eval (d:dec list) (r:env) (s: store) = match d with
                                                 | ValueInt(v) -> raise DIFFERENT_TYPE_ASSIGNATION
                                             )
                                     )
+    | Dec(x,Pointer(pcontent))::decls ->
+    		let newaddr = newmem s
+    			and depth = 0
+    		in dec_eval decls (updateenv(r,x,Descr_Pntr(depth))) (updatemem(s,Loc(newaddr),ValueInt(0)))
     | Dec(x,Vector(tipo,lb,ub))::decls
                                 ->  let newaddr = newmem s
                                     and dim = ub - lb + 1
