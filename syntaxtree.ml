@@ -4,13 +4,13 @@ type ide =
 
 (* Reference *)
 type rexp =
-	  Sref 		of ide		(* Simple Reference => ^ide *)
-	| Mref 		of rexp		(* Long Reference => ^^ide *)
+	  Sref 		of ide		(* Simple Reference => @ide *)
+	| Mref 		of rexp		(* Long Reference => @@@ide *)
 
 (* Derefence *)
 type dexp =
-	  Sunref	of ide		(* Simple Derefencete => @ide *)
-	| Munref 	of dexp		(* Multiple Dereference => @@@ide *)
+	  Sunref	of ide		(* Simple Derefencete => ^ide *)
+	| Munref 	of dexp		(* Multiple Dereference => ^^^ide *)
 
 (* arithmetical expressions *)
 type aexp  =

@@ -16,6 +16,9 @@ eval:
 	$(CC) -c main.ml	
 	$(CC) -o $(APP) lexer.cmo parser.cmo syntaxtree.cmo interpreter.cmo main.cmo
 
+run:
+	./$(APP) < input/pntr.cre
+
 test:
 	./test.sh
 

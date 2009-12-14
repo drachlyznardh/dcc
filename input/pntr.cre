@@ -2,13 +2,19 @@ program
 
    var x : int;
    var y : int;
-   var p : ^^int
+   var z : int;
+   var p : ^int;
+   var q : ^^int;
+   var r : ^^^int
 
 begin
 
    x := 40;
    p := ^x;
    y := @p;
+   q := @p;
+   r := @q;
+   z := ^^^r;
 
    write(x);
    write(y)

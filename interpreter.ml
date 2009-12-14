@@ -12,6 +12,7 @@ type loc =
 type value =
       ValueInt of int				(* Type integer with value *)
     | ValueFloat of float			(* Type float with value *)
+    | ValueLoc of loc				(* Type location with value *)
 
 type store =
 	loc -> value					(* Store: location to simple values *)
@@ -19,7 +20,7 @@ type store =
 type env_entry =
 	  Var of loc					(* Location, variable *)
 	| Val of value					(* Value, constant *)
-	| Descr_Pntr of loc				(* Pointer to heap location *)
+	| Descr_Pntr of int * loc		(* Pointer with depth (1+) and location *)
 	| Descr_Vector of
 		loc * int * int				(* Vector with start point, lower and upper bounds *)
 	| Descr_Procedure of
@@ -43,6 +44,8 @@ exception DIFFERENT_TYPE_OPERATION
 exception DIFFERENT_TYPE_ASSIGNATION
 exception PARAMETERS_DO_NOT_MATCH
 
+exception NOT_YET_IMPLEMENTED 		of string
+exception NOT_A_POINTER				(* While calculating pointer's depth *)
 exception NO_HEAP					(* Heap non existent *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 
@@ -83,6 +86,17 @@ let rec updatemem_vector((s:store), addr, length, (v:value)) :store =
                 in
                     updatemem_vector(news,Loc(newmem news),n-1,v)
 
+(** START OF FUFFA **)
+
+(* Calculate pointer depth *)
+let pntr_depth (p:pType) : int =
+	let rec aux p = match p with
+		  SPointer(_) -> 0
+		| MPointer(next) -> 1 + (aux next)
+	in let res = aux p
+	  	in print_string ("\nLOL puntatore di " ^ (string_of_int res) ^ " gradi\n"); res
+
+(** END OF FUFFA **)
 
 (* evaluation of arithmetical expressions *)
 let rec eval_aexp (e:aexp) (r:env) (s:store) : value = match e with
@@ -94,6 +108,34 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) : value = match e with
                         | Val(v) -> v
                         | _ -> raise SYNTAX
                     )
+    | Deref(p)  -> (
+    				
+					let rec aux (p:dexp) : value = match p with
+						  Sunref(i) -> (
+					  					match r(i) with
+							  				  Var(l) -> s(l)
+							  				| Val(v) -> v
+							  				| _ -> raise SYNTAX
+						  				)
+						| Munref(next) -> (aux next)
+					in let res = aux p
+					in print_string ("\nDereference\n"); res
+
+    			   )
+    | Ref(p)    -> (
+    	
+					let rec aux (p:rexp) : value = match p with
+						  Sref(i) -> (
+						  				match r(i) with
+							  				  Var(l) -> s(l)
+							  				| Val(v) -> v
+							  				| _ -> raise SYNTAX
+						  				)
+						| Mref(next) -> aux next
+					in let res = aux p
+					in print_string ("\nReference\n"); res
+
+    			   )
     | Vec(v,i)  ->  (
                      match r(v) with
                           Descr_Vector(Loc(vo),lb,ub) ->
@@ -135,7 +177,6 @@ and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) fi fr =
                                     )
         )
 
-
 let rec eval_bexp (e:bexp) (r:env) (s:store) = match e with
       B(b)      ->  b
     | And (a,b) ->  ((eval_bexp a r s ) && (eval_bexp b r s ))
@@ -175,8 +216,8 @@ let rec dec_eval (d:dec list) (r:env) (s: store) = match d with
                                     )
     | Dec(x,Pointer(pcontent))::decls ->
     		let newaddr = newmem s
-    			and depth = 0
-    		in dec_eval decls (updateenv(r,x,Descr_Pntr(depth))) (updatemem(s,Loc(newaddr),ValueInt(0)))
+    			and depth = pntr_depth pcontent
+    		in dec_eval decls (updateenv(r,x,Descr_Pntr(depth,Loc(newaddr)))) (updatemem(s,Loc(newaddr),ValueInt(0)))
     | Dec(x,Vector(tipo,lb,ub))::decls
                                 ->  let newaddr = newmem s
                                     and dim = ub - lb + 1
