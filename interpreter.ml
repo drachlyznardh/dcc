@@ -38,16 +38,17 @@ type heap = loc -> heap_entry		(* Heap entries *)
 (* exception *)
 exception NO_MEM
 exception NO_IDE
-exception SYNTAX
+exception SYNTAX					of string
 exception INDEX_OUT_OF_BOUNDS
 exception DIFFERENT_TYPE_OPERATION
 exception DIFFERENT_TYPE_ASSIGNATION
 exception PARAMETERS_DO_NOT_MATCH
 
-exception NOT_YET_IMPLEMENTED 		of string
+exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
 exception NOT_A_POINTER				(* While calculating pointer's depth *)
 exception NO_HEAP					(* Heap non existent *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
+exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? *)
 
 (******************************)
 
@@ -93,8 +94,25 @@ let pntr_depth (p:pType) : int =
 	let rec aux p = match p with
 		  SPointer(_) -> 0
 		| MPointer(next) -> 1 + (aux next)
-	in let res = aux p
+	in aux p
+	(*
+	let res = aux p
 	  	in print_string ("\nLOL puntatore di " ^ (string_of_int res) ^ " gradi\n"); res
+	*)
+
+(* Get final identifier name from a pointer *)
+let pntr_get_name (p:dexp) (r:env) =
+	let rec aux (p:dexp) (r:env) = match p with
+		  Sunref(id) -> (r(id), 1)
+		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
+	in aux p r
+
+let rec do_deref depth (l:loc) (s:store) = 
+	let res = s(l) in
+		if depth == 0 then 
+			s(l)
+		else
+			let newl = Loc(res) in do_deref (depth - 1) newl s
 
 (** END OF FUFFA **)
 
@@ -106,46 +124,70 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) : value = match e with
                      match r(i) with
                           Var(l) -> s(l)
                         | Val(v) -> v
-                        | _ -> raise SYNTAX
+                        | Descr_Pntr(n,l) -> s(l)
+                        | _ -> match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
     | Deref(p)  -> (
     				
+    				let (depth, id) = pntr_get_name p r
+    				in do_deref depth id s
+(*
+    				and
 					let rec aux (p:dexp) : value = match p with
 						  Sunref(i) -> (
 					  					match r(i) with
-							  				  Var(l) -> s(l)
-							  				| Val(v) -> v
-							  				| _ -> raise SYNTAX
+							  				  Descr_Pntr(_,l) ->
+							  				  	(
+							  				  		let addr = s(l) in match addr with
+							  				  			ValueLoc(realloc) -> s(realloc)
+							  				  	)
+							  				| _ ->
+							  					(
+							  						match i with
+							  							Ide(name) -> raise (SYNTAX ("Eval_aexp(Deref): Not a Descr_Pntr ("^name^")"))
+							  					)
 						  				)
 						| Munref(next) -> (aux next)
-					in let res = aux p
+					in aux p
+					(*
+					let res = aux p
 					in print_string ("\nDereference\n"); res
-
+					*)
+*)
     			   )
     | Ref(p)    -> (
     	
 					let rec aux (p:rexp) : value = match p with
 						  Sref(i) -> (
-						  				match r(i) with
-							  				  Var(l) -> s(l)
-							  				| Val(v) -> v
-							  				| _ -> raise SYNTAX
+						  				match r(i) with 
+						  					  Var(l) -> ValueLoc(l) (* Return variable address *)
+							  				| Descr_Pntr(_,l) -> ValueLoc(l) (* Return pointer address *)
+							  				| Descr_Vector(l,_,_) -> ValueLoc(l) (* Return vector address *)
+							  				| _ ->
+							  					(
+							  						match i with
+							  							Ide(name) -> raise (SYNTAX ("Eval_aexp(Ref): Not a Descr_Pntr ("^name^")"))
+							  					)
 						  				)
 						| Mref(next) -> aux next
-					in let res = aux p
+					in aux p
+					(*
+					let res = aux p
 					in print_string ("\nReference\n"); res
-
+					*)
     			   )
     | Vec(v,i)  ->  (
                      match r(v) with
                           Descr_Vector(Loc(vo),lb,ub) ->
-                            let ValueInt(pos) = (eval_aexp i r s)
-                            in
-                                if (pos >= lb && pos <= ub) then
-                                    s(Loc(vo+pos))
-                                else
-                                    raise INDEX_OUT_OF_BOUNDS
-                        | _ -> raise SYNTAX
+							(
+								let ValueInt(pos) = (eval_aexp i r s)
+		                        in
+		                            if (pos >= lb && pos <= ub) then
+		                                s(Loc(vo+pos))
+		                            else
+		                                raise INDEX_OUT_OF_BOUNDS
+							)
+                        | _ -> raise (SYNTAX "Eval_aexp(Vec): Not a Descr_Vector")
                     )
     
     | Sum (a,b) ->  aexp_op_fun a b r s (+) (+.)
@@ -158,7 +200,6 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) : value = match e with
                         in aexp_op_fun a b r s mi mf
     
     | Div (a,b) -> aexp_op_fun a b r s (/) (/.)
-
 
 and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) fi fr = 
     let aValue = (eval_aexp a r s)
@@ -175,6 +216,7 @@ and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) fi fr =
                                           ValueFloat(op2) -> ValueFloat(fr op1 op2)
                                         | _ -> raise DIFFERENT_TYPE_OPERATION
                                     )
+			| ValueLoc(Loc(l)) -> raise (SYNTAX ("Location (" ^ (string_of_int l) ^ ")"))
         )
 
 let rec eval_bexp (e:bexp) (r:env) (s:store) = match e with
@@ -206,18 +248,23 @@ let rec dec_eval (d:dec list) (r:env) (s: store) = match d with
                                              match valore with
                                                   ValueInt(v) -> dec_eval decls (updateenv(r,x,Val(ValueInt(v)))) s
                                                 | ValueFloat(v) -> raise DIFFERENT_TYPE_ASSIGNATION
+                                                | ValueLoc(Loc(l)) -> raise DIFFERENT_TYPE_ASSIGNATION
                                             )
                                          | Float->
                                             (
                                              match valore with
                                                   ValueFloat(v) -> dec_eval decls (updateenv(r,x,Val(ValueFloat(v)))) s
                                                 | ValueInt(v) -> raise DIFFERENT_TYPE_ASSIGNATION
+                                                | ValueLoc(Loc(l)) -> raise DIFFERENT_TYPE_ASSIGNATION
                                             )
                                     )
     | Dec(x,Pointer(pcontent))::decls ->
     		let newaddr = newmem s
     			and depth = pntr_depth pcontent
-    		in dec_eval decls (updateenv(r,x,Descr_Pntr(depth,Loc(newaddr)))) (updatemem(s,Loc(newaddr),ValueInt(0)))
+    		in (
+    			(* print_string ("New Descr_Pntr(" ^ (string_of_int depth) ^ ", " ^ (string_of_int newaddr) ^ ")"); *)
+    			dec_eval decls (updateenv(r,x,Descr_Pntr(depth,Loc(newaddr)))) (updatemem(s,Loc(newaddr),ValueLoc(Loc(0))))
+    		)
     | Dec(x,Vector(tipo,lb,ub))::decls
                                 ->  let newaddr = newmem s
                                     and dim = ub - lb + 1
@@ -263,8 +310,10 @@ let type_checking (input_values:value list) (parameters:param list) =
                         if (tipo=Float) then
                             (check_types acts forms)
                         else false
+                    | ValueLoc(Loc(l)) ->
+                    	raise (SYNTAX "You cannot use ValueLoc")
                 )
-            | _ -> raise SYNTAX
+            | _ -> raise (SYNTAX "Type_checking: error")
     in
         if (List.length(input_values)!= List.length(parameters))
             then false
@@ -282,9 +331,9 @@ let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s: st
                 (
                  match r'(id) with
                       Var(l) -> (r',updatemem(s',l,v))
-                    | _ -> raise SYNTAX
+                    | _ -> raise (SYNTAX "Assign_values: Not a Variable")
                 )
-        | _ -> raise SYNTAX
+        | _ -> raise (SYNTAX "Assign_values: Not a list")
 
 
 
@@ -299,7 +348,11 @@ let rec exec (c: cmd) (r: env) (s: store) = match c with
                               LVar(id)  -> (
                                             match r(id) with
                                               Var(l)    -> updatemem(s,l,ret)
-                                            | _         -> raise SYNTAX
+                                            | Descr_Pntr(n,l) -> updatemem(s,l,ret)
+                                            | _         -> (
+		                                        			match id with 
+		                                        				Ide(name) -> raise (SYNTAX ("Exec(Ass,LVar): Not a Variable("^name^")"))
+                                            				)
                                            )
                             | LVec(v,idx) -> (
                                               match r(v) with
@@ -312,7 +365,7 @@ let rec exec (c: cmd) (r: env) (s: store) = match c with
                                                             (
                                                              raise INDEX_OUT_OF_BOUNDS
                                                             )
-                                                | _ -> raise SYNTAX
+                                                | _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
                                              )
                         )
     | Blk([])       ->  s
@@ -345,7 +398,7 @@ let rec exec (c: cmd) (r: env) (s: store) = match c with
                                                 else s'
                                     in exec_for s0
                                 )
-                            | _ -> raise SYNTAX
+                            | _ -> raise (SYNTAX "Exec(For): Not a Variable")
                         )
     | Repeat(c,b)   ->  let s' = exec c r s
                         in
@@ -359,6 +412,7 @@ let rec exec (c: cmd) (r: env) (s: store) = match c with
                          match ret with
                               ValueInt(op1) -> print_int(op1); print_string "\n";s
                             | ValueFloat(op1) -> print_float(op1); print_string "\n";s
+                            | ValueLoc(Loc(op1)) -> print_int(op1); print_string "\n";s
                         )
     | PCall(id,input_exprs)
                     ->  let input_values = (eval_actual_params input_exprs r s)
@@ -370,7 +424,7 @@ let rec exec (c: cmd) (r: env) (s: store) = match c with
                                     exec_proc (r(id)) input_values r s
                                 else
                                     raise PARAMETERS_DO_NOT_MATCH
-                            | _ -> raise SYNTAX
+                            | _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
                         )
 
 
@@ -386,7 +440,7 @@ and exec_proc (ee:env_entry) (input_values:value list) (r: env) (s: store) :stor
         match ee with
               Descr_Procedure(params,locals,cmds) ->
                 do_exec params locals cmds input_values r s
-            | _ -> raise SYNTAX
+            | _ -> raise (SYNTAX "Exec_proc: Not a Descr_Procedure")
 
 
 (* evaluation of programs *)

@@ -2,7 +2,6 @@ program
 
    var x : int;
    var y : int;
-   var z : int;
    var p : ^int;
    var q : ^^int;
    var r : ^^^int
@@ -10,13 +9,22 @@ program
 begin
 
    x := 40;
-   p := ^x;
-   y := @p;
-   q := @p;
-   r := @q;
-   z := ^^^r;
+   p := @x;
+   y := ^p;
 
    write(x);
-   write(y)
+   write(y);
+
+   x := 404;
+   p := @x;
+   q := @p;
+   r := @q;
+   y := ^^^r;
+
+   write(x);
+   write(y);
+   write(p);
+   write(q);
+   write(r)
 
 end
