@@ -49,6 +49,7 @@ exception NOT_A_POINTER				(* While calculating pointer's depth *)
 exception NO_HEAP					(* Heap non existent *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? *)
+exception LOL_DUNNO
 
 (******************************)
 
@@ -101,18 +102,25 @@ let pntr_depth (p:pType) : int =
 	*)
 
 (* Get final identifier name from a pointer *)
-let pntr_get_name (p:dexp) (r:env) =
+let pntr_get_name (p:dexp) (r:env) : (loc * int) =
 	let rec aux (p:dexp) (r:env) = match p with
-		  Sunref(id) -> (r(id), 1)
+		  Sunref(id) -> (
+		  				match r(id) with
+		  					  Var(l) -> (l, 1)
+		  					| Descr_Pntr(n,l) -> (l,1)
+		  					| _ -> raise LOL_DUNNO
+		  				)
 		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
 	in aux p r
 
-let rec do_deref depth (l:loc) (s:store) = 
+let rec do_deref (depth:int) (l:loc) (s:store) : value = 
 	let res = s(l) in
 		if depth == 0 then 
-			s(l)
+			res
 		else
-			let newl = Loc(res) in do_deref (depth - 1) newl s
+			match res with
+				ValueLoc(newl) -> do_deref (depth - 1) newl s
+				| _ -> raise (SYNTAX "Do_deref: Not a ValueLoc")
 
 (** END OF FUFFA **)
 
@@ -129,7 +137,7 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) : value = match e with
                     )
     | Deref(p)  -> (
     				
-    				let (depth, id) = pntr_get_name p r
+    				let (id, depth) = pntr_get_name p r
     				in do_deref depth id s
 (*
     				and
@@ -382,6 +390,7 @@ let rec exec (c: cmd) (r: env) (s: store) = match c with
                             match s(l) with
                               ValueInt(n) -> updatemem(s, l, ValueInt(n + 1))
                             | ValueFloat(f) -> updatemem(s, l, ValueFloat(f +. 1.0))
+                            | ValueLoc(_) -> raise LOL_DUNNO
                         in 
                         (
                          match r(i) with
@@ -410,9 +419,9 @@ let rec exec (c: cmd) (r: env) (s: store) = match c with
                         in
                         (
                          match ret with
-                              ValueInt(op1) -> print_int(op1); print_string "\n";s
-                            | ValueFloat(op1) -> print_float(op1); print_string "\n";s
-                            | ValueLoc(Loc(op1)) -> print_int(op1); print_string "\n";s
+                              ValueInt(op1) -> print_string("Int:\t"); print_int(op1); print_string "\n";s
+                            | ValueFloat(op1) -> print_string("Float:\t"); print_float(op1); print_string "\n";s
+                            | ValueLoc(Loc(op1)) -> print_string("Loc:\t"); print_int(op1); print_string "\n";s
                         )
     | PCall(id,input_exprs)
                     ->  let input_values = (eval_actual_params input_exprs r s)
