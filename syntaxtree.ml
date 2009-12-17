@@ -19,6 +19,7 @@ type aexp  =
 	| Ident		of ide
 	| Ref		of rexp
 	| Deref		of dexp
+	| Malloc	of gType * aexp
 	| Vec		of ide * aexp
 	| Sum		of aexp * aexp
 	| Sub		of aexp * aexp
@@ -50,6 +51,7 @@ type cmd =
 	| Repeat	of cmd * bexp
 	| Write		of aexp
 	| PCall		of ide * aexp list
+	| Free		of lexp
 
 (* declarations *)
 type bType =

@@ -12,7 +12,7 @@ open Syntaxtree;;
 
 %token			PROGRAM PROCEDURE VAR CONST INT FLOAT BEGIN END 
 %token			IF THEN ELSE WHILE DO FOR TO REPEAT UNTIL WRITE
-%token			ARRAY OF LBRACKET RBRACKET DOTS CALL
+%token			ARRAY OF LBRACKET RBRACKET DOTS CALL MALLOC FREE
 
 %token			PLUS MINUS TIMES DIVISION EQUAL LESSEQUAL LESS AND OR NOT 
 %token			ASSIGN CARET AT
@@ -100,6 +100,7 @@ cmd
     | REPEAT cmd UNTIL bexp                       { Repeat($2,$4) }
     | WRITE aexp                                  { Write($2) }
     | CALL ide LP opt_aexp_list RP                { PCall($2,$4) }
+    | FREE LP lexp RP							  { Free($3) }
     ;
 
 opt_cmd_list
@@ -165,6 +166,7 @@ aexp
     : aexp PLUS aexp_term                         { Sum($1,$3) }
     | aexp MINUS aexp_term                        { Sub($1,$3) }
     | aexp_term                                   { $1 }
+    | MALLOC LP gType COMMA aexp RP				  { Malloc($3,$5) }
     ;
     
 opt_aexp_list

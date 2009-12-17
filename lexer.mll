@@ -43,6 +43,8 @@ rule lex =
 	| "until"		{ UNTIL }
 	| "write"		{ WRITE }
 	| "call"		{ CALL }
+	| "malloc"		{ MALLOC }
+	| "free"		{ FREE }
 
 	| ident			{ IDE (Lexing.lexeme lexbuf) }
 
