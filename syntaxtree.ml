@@ -12,8 +12,28 @@ type dexp =
 	  Sunref	of ide		(* Simple Derefencete => ^ide *)
 	| Munref 	of dexp		(* Multiple Dereference => ^^^ide *)
 
+(* Declarations *)
+
+(* Native types *)
+type bType =
+	  Int
+	| Float
+
+(* Pointer types *)
+type pType =
+	  SPointer	of bType	(* Last level, pointer basic type *)
+	| MPointer	of pType	(* One pType means one indirection level *)
+
+(* Global types: because of Malloc's need to know the data type to allocate,
+these declaration have to be done together *)
+type gType =
+	  Basic		of bType
+	| Const		of bType * aexp
+	| Pointer	of pType
+	| Vector	of bType * int * int
+
 (* arithmetical expressions *)
-type aexp  =
+and aexp  =
 	  N			of int
 	| R			of float
 	| Ident		of ide
@@ -52,21 +72,6 @@ type cmd =
 	| Write		of aexp
 	| PCall		of ide * aexp list
 	| Free		of lexp
-
-(* declarations *)
-type bType =
-	  Int
-	| Float
-
-type pType =
-	  SPointer	of bType	(* Last level, pointer basic type *)
-	| MPointer	of pType	(* One pType means one indirection level *)
-
-type gType =
-	  Basic		of bType
-	| Const		of bType * aexp
-	| Pointer	of pType
-	| Vector	of bType * int * int
 
 type dec =
 	  Dec		of ide * gType
