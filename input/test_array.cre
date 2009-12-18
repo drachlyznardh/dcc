@@ -1,6 +1,6 @@
 program
-    var v : array[4 .. 9] of int;
-    var i : int
+    var v : array[4 .. 9] of float;
+    var i : float
 
 begin
     for i := 4 to 9 do

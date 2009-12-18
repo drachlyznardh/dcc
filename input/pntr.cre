@@ -1,21 +1,15 @@
 program
 
-   var x : int;
+   var x : float;
    var y : int;
+   var z : int;
    var p : ^int;
    var q : ^^int;
    var r : ^^^int
 
 begin
 
-   x := 40;
-   p := @x;
-   y := ^p;
-
-   write(x);
-   write(y);
-
-   x := 404;
+   x := 404.03456789;
    p := @x;
    q := @p;
    r := @q;
@@ -25,6 +19,11 @@ begin
    write(y);
    write(p);
    write(q);
-   write(r)
+   write(r);
+   
+   z := 101.101;
+   write(z);
+   z := 7;
+   write(z)
 
 end

@@ -42,6 +42,7 @@ exception SYNTAX					of string
 exception INDEX_OUT_OF_BOUNDS
 exception DIFFERENT_TYPE_OPERATION
 exception DIFFERENT_TYPE_ASSIGNATION
+exception DIFFERENT_TYPE_POINTER
 exception PARAMETERS_DO_NOT_MATCH
 
 exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
@@ -101,8 +102,14 @@ let pntr_depth (p:pType) : int =
 	  	in print_string ("\nLOL puntatore di " ^ (string_of_int res) ^ " gradi\n"); res
 	*)
 
+let pntr_finaltype (p:pType) : bType =
+	let rec aux p = match p with
+		SPointer(v) -> v
+		| MPointer(next) -> aux next
+	in aux p
+
 (* Get final identifier name from a pointer *)
-let pntr_get_name (p:dexp) (r:env) : (loc * int) =
+let pntr_get_data (p:dexp) (r:env) : (loc * int) =
 	let rec aux (p:dexp) (r:env) = match p with
 		  Sunref(id) -> (
 		  				match r(id) with
@@ -137,30 +144,21 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) : value = match e with
                     )
     | Deref(p)  -> (
     				
-    				let (id, depth) = pntr_get_name p r
-    				in do_deref depth id s
-(*
-    				and
-					let rec aux (p:dexp) : value = match p with
-						  Sunref(i) -> (
-					  					match r(i) with
-							  				  Descr_Pntr(_,l) ->
-							  				  	(
-							  				  		let addr = s(l) in match addr with
-							  				  			ValueLoc(realloc) -> s(realloc)
-							  				  	)
-							  				| _ ->
-							  					(
-							  						match i with
-							  							Ide(name) -> raise (SYNTAX ("Eval_aexp(Deref): Not a Descr_Pntr ("^name^")"))
-							  					)
-						  				)
-						| Munref(next) -> (aux next)
-					in aux p
-					(*
-					let res = aux p
-					in print_string ("\nDereference\n"); res
-					*)
+    				let (id, depth) = pntr_get_data p r
+    				in let res = do_deref depth id s
+    				in res
+(*    					and restype = pntr_finaltype (s (r id))
+    				in match restype with
+    					  Int   -> (
+    					  			match res with
+    					  				ValueInt(_) -> res
+    					  				| _ -> raise DIFFERENT_TYPE_POINTER
+    					  			)
+    					| Float -> (
+    								match res with
+    									ValueFloat(_) -> res
+    									| _ -> raise DIFFERENT_TYPE_POINTER
+    								) 
 *)
     			   )
     | Ref(p)    -> (
