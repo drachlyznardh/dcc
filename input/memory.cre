@@ -1,0 +1,18 @@
+program
+
+   var x : int;
+   var p : ^int
+
+begin
+
+   p := malloc (int);
+
+   ^p := 102;
+   x := ^p;
+   
+   write(x);
+   
+   free(p);
+   write(^p)
+
+end

@@ -39,7 +39,7 @@ and aexp  =
 	| Ident		of ide
 	| Ref		of rexp
 	| Deref		of dexp
-	| Malloc	of gType * aexp
+	| Malloc	of gType
 	| Vec		of ide * aexp
 	| Sum		of aexp * aexp
 	| Sub		of aexp * aexp
@@ -60,6 +60,7 @@ type bexp =
 type lexp =
 	  LVar 		of ide
 	| LVec 		of ide * aexp
+	| Lunref	of dexp
 
 (* commands *)
 type cmd =

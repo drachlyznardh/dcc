@@ -16,17 +16,16 @@ eval:
 	$(CC) -c main.ml	
 	$(CC) -o $(APP) lexer.cmo parser.cmo syntaxtree.cmo interpreter.cmo main.cmo
 
-run:
-	./$(APP) < input/pntr.cre
+run: eval
+	./$(APP) < input/memory.cre
 
-test:
+test: eval
 	./test.sh
 
 clean:
 	rm -f parser.mli parser.ml lexer.ml *.cmo *.cmi *~
 
-veryclean:
-	rm -f parser.mli parser.ml lexer.ml *.cmo *.cmi *~
+veryclean: clean
 	rm $(APP)
 
 .PHONY: test clean veryclean

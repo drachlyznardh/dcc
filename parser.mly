@@ -116,6 +116,7 @@ cmd_list
 lexp
     : ide                                         { LVar($1) }
     | ide LBRACKET aexp RBRACKET                  { LVec($1,$3) }
+    | CARET dexp_term							  { Lunref($2) }
     ;
 
 bexp_factor
@@ -166,7 +167,7 @@ aexp
     : aexp PLUS aexp_term                         { Sum($1,$3) }
     | aexp MINUS aexp_term                        { Sub($1,$3) }
     | aexp_term                                   { $1 }
-    | MALLOC LP gType COMMA aexp RP				  { Malloc($3,$5) }
+    | MALLOC LP gType RP						  { Malloc($3) }
     ;
     
 opt_aexp_list
