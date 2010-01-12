@@ -24,12 +24,6 @@ type env_entry =
 type env =
 	ide -> env_entry				(* Environment entries *)
 
-type hloc =
-	HLoc			of loc
-
-type hentry =
-	  HEntry	of value		(* End of chain, simple value *)
-
 (* Heap entries *)
 
 (* exception *)
@@ -44,15 +38,17 @@ exception PARAMETERS_DO_NOT_MATCH
 
 exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
 exception NOT_A_POINTER				(* While calculating pointer's depth *)
-exception NO_HEAP					(* Heap non existent *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? *)
 exception LOL_DUNNO
 
+let nextloc (l:loc) : loc = 
+	match l with Loc(value) -> Loc(value + 1)
+
 (* Heap class *)
 class heap size = object (self)
 	
-	val mutable newcell = -1
+	val mutable newcell = 0
 	val mutable htbl = (Hashtbl.create size : (loc, value) Hashtbl.t)
 	
 	method update (l:loc) (nv:value) = (
@@ -64,7 +60,17 @@ class heap size = object (self)
 					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
 		) with Not_found -> Hashtbl.replace htbl l nv
 	)
+	
+	method updatevec (l:loc) (s:int) (nv:value) = (
+		if (s > 0) then
+			self#update l nv; self#updatevec (nextloc l) (s - 1) nv; ()
+	)
 
 	method get (l:loc) = Hashtbl.find htbl l
+	
+	method newmem size = (
+		let res = Loc(newcell) in
+			newcell <- newcell + size; res
+	)
 
 end;;

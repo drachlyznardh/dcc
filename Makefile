@@ -17,10 +17,10 @@ eval:
 	$(CC) -c main.ml	
 	$(CC) -o $(APP) lexer.cmo parser.cmo syntaxtree.cmo heap.cmo interpreter.cmo main.cmo
 
-run: eval
+run: 
 	./$(APP) < input/memory.cre
 
-test: eval
+test: 
 	./test.sh
 
 clean:

@@ -113,7 +113,25 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 						| Mref(next) -> aux next
 					in aux p
     			   )
-    | Malloc(_) -> raise (NOT_YET_IMPLEMENTED "LOL Malloc")
+    | Malloc(t) -> (
+					match t with
+						  Basic(b) ->			let l = h#newmem 1 in
+							  						(match b with
+							  							  Int -> h#update l (ValueInt(0))
+							  							| Float -> h#update l (ValueFloat(0.0))
+							  						); ValueLoc(l)
+						| Const(_,_) ->			raise (SYNTAX "You don't want to declare dynamic constant, do you?")
+						| Pointer(p) -> 		let l = h#newmem 1 in
+													(match p with 
+														_ -> h#update l (ValueLoc(Loc(0)))
+													); ValueLoc(l)
+						| Vector(v,lb,ub) ->	let s = ub - lb in
+													let l = h#newmem s in
+														(match v with
+															  Int -> h#updatevec l s (ValueInt(0))
+															| Float -> h#updatevec l s (ValueFloat(0.0))
+														); ValueLoc(l)
+    				)
     | Vec(v,i)  ->  (
                      match r(v) with
                           Descr_Vector(Loc(vo),lb,ub) ->
