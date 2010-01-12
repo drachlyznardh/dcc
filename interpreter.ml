@@ -3,58 +3,7 @@
 (*          (2007)Revisione (Stefano Schivo)         *)
 
 open Syntaxtree;;
-open Hashtbl;;
-(*** INTERPRETER DOMAINS ***)
-
-(* memory *)
-type loc =
-	Loc of int						(* Location, position *)
-
-type value =
-      ValueInt of int				(* Type integer with value *)
-    | ValueFloat of float			(* Type float with value *)
-    | ValueLoc of loc				(* Type location with value *)
-
-type store =
-	loc -> value					(* Store: location to simple values *)
-
-type env_entry =
-	  Var of loc					(* Location, variable *)
-	| Val of value					(* Value, constant *)
-	| Descr_Pntr of int * loc		(* Pointer with depth (1+) and location *)
-	| Descr_Vector of
-		loc * int * int				(* Vector with start point, lower and upper bounds *)
-	| Descr_Procedure of
-		param list * dec list * cmd	(* Procedure descriptor *)
-
-type env =
-	ide -> env_entry				(* Environment entries *)
-
-type hloc =
-	HLoc			of loc
-
-type hentry =
-	  HEntry	of value		(* End of chain, simple value *)
-
-type heap = Hashtbl
-(* Heap entries *)
-
-(* exception *)
-exception NO_MEM
-exception NO_IDE
-exception SYNTAX					of string
-exception INDEX_OUT_OF_BOUNDS
-exception DIFFERENT_TYPE_OPERATION
-exception DIFFERENT_TYPE_ASSIGNATION
-exception DIFFERENT_TYPE_POINTER
-exception PARAMETERS_DO_NOT_MATCH
-
-exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
-exception NOT_A_POINTER				(* While calculating pointer's depth *)
-exception NO_HEAP					(* Heap non existent *)
-exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
-exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? *)
-exception LOL_DUNNO
+open Heap;;
 
 (******************************)
 
@@ -63,7 +12,7 @@ exception LOL_DUNNO
 (* utility functions *)
 let initenv (x:ide):env_entry = raise NO_IDE
 let initmem (x:loc):value = raise NO_MEM
-let initheap n = Hashtbl.create n (* Initial empty Heap *)
+let initheap = new heap 16 (* Initial empty Heap *)
 
 let updatemem ((s:store), addr, (v:value)) :store = function
     x -> if (x = addr) then v else s(x)
@@ -272,10 +221,10 @@ let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
 
 
 (* declaration of subprograms *)
-let rec sub_prog_decl_eval (d: sub_prog list) ((r:env),(s:store)) = match d with
-      [] -> (r,s)
+let rec sub_prog_decl_eval (d: sub_prog list) ((r:env),(s:store),(h:heap)) = match d with
+      [] -> (r,s,h)
     | Proc(id,params,locals,cmds)::decls ->
-        sub_prog_decl_eval decls ((updateenv(r,id,(Descr_Procedure(params,locals,cmds)))),s)
+        sub_prog_decl_eval decls ((updateenv(r,id,(Descr_Procedure(params,locals,cmds)))),s,h)
 
 
 (* evaluation of actual parameter list *)
@@ -442,6 +391,6 @@ and exec_proc (ee:env_entry) (input_values:value list) (r: env) (s: store) (h:he
 (* evaluation of programs *)
 let run prog = 
     match prog with
-        Program(vars,sub_progs,com) ->   let (r,s) = sub_prog_decl_eval sub_progs (dec_eval vars initenv initmem initheap)
+        Program(vars,sub_progs,com) ->   let (r,s,h) = sub_prog_decl_eval sub_progs (dec_eval vars initenv initmem initheap)
                                          in (exec com r s h)
       | Null -> initmem
