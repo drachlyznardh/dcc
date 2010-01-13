@@ -7,6 +7,8 @@ begin
 
    p := malloc (int);
 
+   write(p);
+
    ^p := 102;
    x := ^p;
    

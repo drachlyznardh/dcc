@@ -329,6 +329,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 												let res = do_deref depth idaddr s
 													in match res with 
 														  ValueLoc(l) -> updatemem(s,l,ret)
+														| ValueInt(l) -> updatemem(s,Loc(l),ret)
 														| _ -> raise LOL_DUNNO
                         					)
                         )
