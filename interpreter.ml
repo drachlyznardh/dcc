@@ -72,8 +72,19 @@ let rec do_deref (depth:int) (l:loc) (s:store) : value =
 				ValueLoc(newl) -> do_deref (depth - 1) newl s
 				| _ -> raise (SYNTAX "Do_deref: Not a ValueLoc")
 
-let get_unref (d:lexp) : dexp = match d with
-	  Lunref(p) -> p
+let get_addr (d:lexp) (r:env) (s:store) : loc = match d with
+	  LVar(id) -> (
+	  				match r(id) with
+	  					  Descr_Pntr(_,l) -> l
+	  					| _ -> raise (SYNTAX "I don't like what you're trying to do...")
+	  			)
+	| LVec(v,off) -> raise (SYNTAX "Oh no you don't want to do that|")
+	| Lunref(p) ->	let (idaddr, depth) = pntr_get_data p r 
+	  					in let res = do_deref depth idaddr s
+							in (
+								match res with
+									ValueLoc(l) -> l
+								)
 	| _ -> raise (SYNTAX "WTF are you doing?")
 
 (** END OF FUFFA **)
@@ -392,7 +403,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                                     raise PARAMETERS_DO_NOT_MATCH
                             | _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
                         )
-	| Free(p) -> raise (NOT_YET_IMPLEMENTED "LOL Free")
+	| Free(p) ->		let l = get_addr p r s
+							in h#delete l; s
 
 
 (* execution of subprograms *)

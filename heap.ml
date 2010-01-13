@@ -68,6 +68,8 @@ class heap size = object (self)
 
 	method get (l:loc) = Hashtbl.find htbl l
 	
+	method delete (l:loc) = Hashtbl.remove htbl l
+	
 	method newmem size = (
 		let res = Loc(newcell) in
 			newcell <- newcell + size; res
