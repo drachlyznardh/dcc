@@ -24,6 +24,9 @@ type env_entry =
 type env =
 	ide -> env_entry				(* Environment entries *)
 
+type hentry =
+	HEntry of int * value
+
 (* Heap entries *)
 
 (* exception *)
@@ -49,26 +52,46 @@ let nextloc (l:loc) : loc =
 class heap size = object (self)
 	
 	val mutable newcell = 0
-	val mutable htbl = (Hashtbl.create size : (loc, value) Hashtbl.t)
+	val mutable htbl = (Hashtbl.create size : (loc, hentry) Hashtbl.t)
 	
 	method update (l:loc) (nv:value) = (
 		try (
 			let ov = Hashtbl.find htbl l in
 				match (nv,ov) with
-					  (ValueInt(_),ValueInt(_)) -> Hashtbl.replace htbl l nv
-					| (ValueFloat(_),ValueFloat(_)) -> Hashtbl.replace htbl l nv
+					  (ValueInt(_),HEntry(c,ValueInt(_))) -> Hashtbl.replace htbl l (HEntry(c,nv))
+					| (ValueFloat(_),HEntry(c,ValueFloat(_))) -> Hashtbl.replace htbl l (HEntry(c,nv))
 					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
-		) with Not_found -> Hashtbl.replace htbl l nv
+		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,nv))
 	)
-	
+(*	
 	method updatevec (l:loc) (s:int) (nv:value) = (
 		if (s > 0) then
 			self#update l nv; self#updatevec (nextloc l) (s - 1) nv; ()
 	)
-
+*)
 	method get (l:loc) = Hashtbl.find htbl l
 	
 	method delete (l:loc) = Hashtbl.remove htbl l
+	
+	method bump (l:loc) = (
+		try (
+			let h = Hashtbl.find htbl l in (
+				match h with
+					HEntry(c,v) -> Hashtbl.replace htbl l (HEntry(c + 1,v))
+			)
+		) with Not_found -> ()
+	)
+	
+	method sage (l:loc) = (
+		try (
+			let h = Hashtbl.find htbl l in (
+				match h with
+					HEntry(c,v) ->
+						if c = 0 then Hashtbl.remove htbl l
+						else Hashtbl.replace htbl l (HEntry(c - 1,v))
+			)
+		) with Not_found -> ()
+	)
 	
 	method newmem size = (
 		let res = Loc(newcell) in
