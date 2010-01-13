@@ -72,11 +72,10 @@ let rec do_deref (depth:int) (l:loc) (s:store) : value =
 				ValueLoc(newl) -> do_deref (depth - 1) newl s
 				| _ -> raise (SYNTAX "Do_deref: Not a ValueLoc")
 
-(* Heap *)
-(*
-let hupdate (h:heap) (key:hloc) (he:hentry) =
-	Hashtbl.add h key he
-*)
+let get_unref (d:lexp) : dexp = match d with
+	  Lunref(p) -> p
+	| _ -> raise (SYNTAX "WTF are you doing?")
+
 (** END OF FUFFA **)
 
 (* evaluation of arithmetical expressions *)
@@ -92,9 +91,9 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
                     )
     | Deref(p)  -> (
     				
-    				let (id, depth) = pntr_get_data p r
-    				in let res = do_deref depth id s
-    				in res
+    				let (idaddr, depth) = pntr_get_data p r in
+    					let res = do_deref depth idaddr s
+    						in res
     			   )
     | Ref(p)    -> (
     	
@@ -326,8 +325,12 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                                                             )
                                                 | _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
                                              )
-                        	| Lunref(p) -> raise (NOT_YET_IMPLEMENTED "LOL Left Unref")
-                        	(* I really need something different from a memory made of a function stack to find this *)
+                        	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
+												let res = do_deref depth idaddr s
+													in match res with 
+														  ValueLoc(l) -> updatemem(s,l,ret)
+														| _ -> raise LOL_DUNNO
+                        					)
                         )
     | Blk([])       ->  s
     | Blk(x::y)     ->  exec (Blk(y)) r (exec x r s h) h
