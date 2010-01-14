@@ -2,7 +2,8 @@ open Syntaxtree;;
 
 (* memory *)
 type loc =
-	Loc of int						(* Location, position *)
+	  SLoc of int					(* Store location *)
+	| HLoc of int					(* Heap location *)
 
 type value =
       ValueInt of int				(* Type integer with value *)
@@ -46,7 +47,9 @@ exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? *
 exception LOL_DUNNO
 
 let nextloc (l:loc) : loc = 
-	match l with Loc(value) -> Loc(value + 1)
+	match l with 
+		  SLoc(value) -> SLoc(value + 1)
+		| HLoc(value) -> HLoc(value + 1)
 
 (* Heap class *)
 class heap size = object (self)
@@ -91,19 +94,26 @@ class heap size = object (self)
 	)
 	
 	method newmem size = (
-		let res = Loc(newcell) in
+		let res = HLoc(newcell) in
 			newcell <- newcell + size; res
 	)
 	
 	method show = (
 		let lookat (l:loc) (h:hentry) = (
 			print_string "\t";
-			match (l,h) with
-				(Loc(addr),HEntry(count,value)) -> (
-					match value with
-						  ValueLoc(Loc(v)) -> print_int addr; print_string ":"; print_int count; print_string ":loc("; print_int v; print_string ")\n"
-						| ValueInt(v) -> print_int addr; print_string ":"; print_int count; print_string ":int("; print_int v; print_string ")\n"
-						| ValueFloat(v) -> print_int addr; print_string ":"; print_int count; print_string ":flt("; print_float v; print_string ")\n")
+			(match (l,h) with
+				  (HLoc(addr),HEntry(count,value)) -> (
+					print_int addr; print_string ":"; print_int count;
+						(match value with
+							  ValueLoc(HLoc(v)) ->	print_string ":hlc["; print_int v;
+							| ValueLoc(SLoc(v)) ->	print_string ":slc["; print_int v;
+							| ValueInt(v) ->		print_string ":int["; print_int v;
+							| ValueFloat(v) ->		print_string ":flt["; print_float v;
+						);
+					print_string "]\n"
+					)
+				| (_,_) -> raise (SYNTAX "Not a HLoc in my heap...")
+			);
 		) in print_string "Heap:\n"; let length = Hashtbl.length htbl in if length = 0 then print_string "\tEmpty\n" else Hashtbl.iter lookat htbl 
 	)
 
