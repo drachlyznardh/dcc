@@ -10,7 +10,7 @@ in
         absyntaxtree = (
         try
             program lex lexbuf 
-        with _ -> Null
+        with _ -> NoProg
         )
     in
         (
@@ -18,5 +18,5 @@ in
               Program(d,p,c) ->
                  print_string ">>> The program is syntactically correct!\n";
                  run absyntaxtree
-            | Null -> print_string ("Errore sintattico alla riga " ^ (string_of_int lexbuf.lex_start_p.pos_lnum) ^ "\n"); exit 1
+            | NoProg -> print_string ("Errore sintattico alla riga " ^ (string_of_int lexbuf.lex_start_p.pos_lnum) ^ "\n"); exit 1
         );;

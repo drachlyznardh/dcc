@@ -47,7 +47,7 @@ let pntr_depth (p:pType) : int =
 
 let pntr_finaltype (p:pType) : bType =
 	let rec aux p = match p with
-		SPointer(v) -> v
+		  SPointer(v) -> v
 		| MPointer(next) -> aux next
 	in aux p
 
@@ -69,7 +69,8 @@ let rec do_deref (depth:int) (l:loc) (s:store) : value =
 			res
 		else
 			match res with
-				ValueLoc(newl) -> do_deref (depth - 1) newl s
+				  StoreLoc(newl) -> do_deref (depth - 1) newl s
+				| HeapLoc(newl) -> do_deref (depth - 1) newl s
 				| _ -> raise (SYNTAX "Do_deref: Not a ValueLoc")
 
 let get_addr (d:lexp) (r:env) (s:store) : loc = match d with
@@ -81,11 +82,7 @@ let get_addr (d:lexp) (r:env) (s:store) : loc = match d with
 	| LVec(v,off) -> raise (SYNTAX "Oh no you don't want to do that|")
 	| Lunref(p) ->	let (idaddr, depth) = pntr_get_data p r 
 	  					in let res = do_deref depth idaddr s
-							in (
-								match res with
-									ValueLoc(l) -> l
-								)
-	| _ -> raise (SYNTAX "WTF are you doing?")
+							in get_loc res
 
 (** END OF FUFFA **)
 
@@ -109,11 +106,11 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
     | Ref(p)    -> (
     	
 					let rec aux (p:rexp) : value = match p with
-						  Sref(i) -> (
+						  Sref(i) ->	(
 						  				match r(i) with 
-						  					  Var(l) -> ValueLoc(l) (* Return variable address *)
-							  				| Descr_Pntr(_,l) -> ValueLoc(l) (* Return pointer address *)
-							  				| Descr_Vector(l,_,_) -> ValueLoc(l) (* Return vector address *)
+						  					  Var(l) -> StoreLoc(l) (* Return variable address *)
+							  				| Descr_Pntr(_,l) -> StoreLoc(l) (* Return pointer address *)
+							  				| Descr_Vector(l,_,_) -> StoreLoc(l) (* Return vector address *)
 							  				| _ ->
 							  					(
 							  						match i with
@@ -131,12 +128,12 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 					  						(match b with
 					  							  Int -> h#update l (ValueInt(0)); print_string "Int"
 					  							| Float -> h#update l (ValueFloat(0.0)); print_string "Flt"
-					  						); print_string (")\n"); h#show; ValueLoc(l)
+					  						); print_string (")\n"); h#show; HeapLoc(l)
 						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 						| Pointer(p) -> let l = h#newmem 1 in
 											(match p with 
-												_ -> h#update l (ValueLoc(Loc(0)))
-											); print_string ("Malloc(Pointer)\n"); h#show; ValueLoc(l)
+												_ -> h#update l (HeapLoc(Loc(0)))
+											); print_string ("Malloc(Pointer)\n"); h#show; HeapLoc(l)
 						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
 					)
     				)
@@ -144,12 +141,20 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
                      match r(v) with
                           Descr_Vector(Loc(vo),lb,ub) ->
 							(
+								let res = (eval_aexp i r s h) in match res with 
+									  ValueInt(pos) ->	if (pos >= lb && pos <= ub) then
+		                                					s(Loc(vo+pos))
+												        else
+												            raise INDEX_OUT_OF_BOUNDS
+		                        	| _ -> raise INDEX_OUT_OF_BOUNDS
+(*
 								let ValueInt(pos) = (eval_aexp i r s h)
 		                        in
 		                            if (pos >= lb && pos <= ub) then
 		                                s(Loc(vo+pos))
 		                            else
 		                                raise INDEX_OUT_OF_BOUNDS
+*)
 							)
                         | _ -> raise (SYNTAX "Eval_aexp(Vec): Not a Descr_Vector")
                     )
@@ -183,7 +188,8 @@ and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) (h:heap) fi fr =
                                           ValueFloat(op2) -> ValueFloat(fr op1 op2)
                                         | _ -> raise DIFFERENT_TYPE_OPERATION
                                     )
-			| ValueLoc(Loc(l)) -> raise (SYNTAX ("Location (" ^ (string_of_int l) ^ ")"))
+			| StoreLoc(l) -> raise (SYNTAX ("Location (" ^ (string_of_loc l) ^ ")"))
+			| HeapLoc(l) -> raise (SYNTAX ("Location (" ^ (string_of_loc l) ^ ")"))
         )
 
 let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
@@ -206,31 +212,18 @@ let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
                                             | Float -> dec_eval decls (updateenv(r,x,Var(Loc(newaddr)))) (updatemem(s,Loc(newaddr),ValueFloat(0.0))) h
                                         )
     | Dec(x,Const(tipo,valore_exp))::decls  
-                                ->  let valore = eval_aexp valore_exp r s h
-                                    in 
-                                    (
-                                      match tipo with
-                                           Int  -> 
-                                            (
-                                             match valore with
-                                                  ValueInt(v) -> dec_eval decls (updateenv(r,x,Val(ValueInt(v)))) s h
-                                                | ValueFloat(v) -> raise DIFFERENT_TYPE_ASSIGNATION
-                                                | ValueLoc(Loc(l)) -> raise DIFFERENT_TYPE_ASSIGNATION
-                                            )
-                                         | Float->
-                                            (
-                                             match valore with
-                                                  ValueFloat(v) -> dec_eval decls (updateenv(r,x,Val(ValueFloat(v)))) s h
-                                                | ValueInt(v) -> raise DIFFERENT_TYPE_ASSIGNATION
-                                                | ValueLoc(Loc(l)) -> raise DIFFERENT_TYPE_ASSIGNATION
-                                            )
-                                    )
+                                ->  let valore = eval_aexp valore_exp r s h in
+                                		(match (tipo,valore) with
+                                			  (Int,ValueInt(v)) -> dec_eval decls (updateenv(r,x,Val(ValueInt(v)))) s h
+                                			| (Float,ValueFloat(v)) -> dec_eval decls (updateenv(r,x,Val(ValueFloat(v)))) s h
+                                			| (_,_) -> raise DIFFERENT_TYPE_ASSIGNATION
+                                		)
     | Dec(x,Pointer(pcontent))::decls ->
     		let newaddr = newmem s
     			and depth = pntr_depth pcontent
     		in (
     			(* print_string ("New Descr_Pntr(" ^ (string_of_int depth) ^ ", " ^ (string_of_int newaddr) ^ ")"); *)
-    			dec_eval decls (updateenv(r,x,Descr_Pntr(depth,Loc(newaddr)))) (updatemem(s,Loc(newaddr),ValueLoc(Loc(0)))) h
+    			dec_eval decls (updateenv(r,x,Descr_Pntr(depth,Loc(newaddr)))) (updatemem(s,Loc(newaddr),StoreLoc(Null))) h
     		)
     | Dec(x,Vector(tipo,lb,ub))::decls
                                 ->  let newaddr = newmem s
@@ -277,8 +270,8 @@ let type_checking (input_values:value list) (parameters:param list) =
                         if (tipo=Float) then
                             (check_types acts forms)
                         else false
-                    | ValueLoc(Loc(l)) ->
-                    	raise (SYNTAX "You cannot use ValueLoc")
+                    | StoreLoc(_) -> raise (SYNTAX "You cannot use StoreLoc")
+                    | HeapLoc(_) -> raise (SYNTAX "You cannot use HeapLoc")
                 )
             | _ -> raise (SYNTAX "Type_checking: error")
     in
@@ -324,20 +317,23 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                             | LVec(v,idx) -> (
                                               match r(v) with
                                                   Descr_Vector(Loc(vo),lb,ub) ->
-                                                    let ValueInt(pos) = (eval_aexp idx r s h)
-                                                    in
-                                                        if (pos >= lb && pos <= ub) then
-                                                            updatemem(s,Loc(vo+pos),ret)
-                                                        else
-                                                            (
-                                                             raise INDEX_OUT_OF_BOUNDS
-                                                            )
+														(
+														let res = (eval_aexp idx r s h) in
+		                                                	(match res with 
+		                                                		  ValueInt(pos) ->
+						                                                if (pos >= lb && pos <= ub)
+						                                                	then updatemem(s,Loc(vo+pos),ret)
+								                                        else 
+								                                            raise INDEX_OUT_OF_BOUNDS
+		                                                       	| _ -> raise INDEX_OUT_OF_BOUNDS
+                                                			)
+                                                		)
                                                 | _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
                                              )
                         	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
 												let res = do_deref depth idaddr s
 													in match res with 
-														  ValueLoc(l) -> updatemem(s,l,ret)
+														  StoreLoc(l) -> updatemem(s,l,ret)
 														| ValueInt(l) -> updatemem(s,Loc(l),ret)
 														| _ -> raise LOL_DUNNO
                         					)
@@ -355,8 +351,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         and update_counter l s =
                             match s(l) with
                               ValueInt(n) -> updatemem(s, l, ValueInt(n + 1))
-                            | ValueFloat(f) -> updatemem(s, l, ValueFloat(f +. 1.0))
-                            | ValueLoc(_) -> raise LOL_DUNNO
+                            | _ -> raise (SYNTAX "Use an integer for your counter, do NOT use other stuff")
                         in 
                         (
                          match r(i) with
@@ -385,9 +380,10 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         in
                         (
                          match ret with
-                              ValueInt(op1) -> print_string("Int:\t"); print_int(op1); print_string "\n";s
-                            | ValueFloat(op1) -> print_string("Float:\t"); print_float(op1); print_string "\n";s
-                            | ValueLoc(Loc(op1)) -> print_string("Loc:\t"); print_int(op1); print_string "\n";s
+                              ValueInt(op1) ->		print_string ("Int:\t"^(string_of_int op1)^"\n");	s
+                            | ValueFloat(op1) ->	print_string ("Flt:\t"^(string_of_float op1)^"\n"); s
+                            | StoreLoc(op1) ->		print_string ("SLc:\t"^(string_of_loc op1)^"\n");	s
+                            | HeapLoc(op1) ->		print_string ("HLc:\t"^(string_of_loc op1)^"\n");	s
                         )
     | PCall(id,input_exprs)
                     ->  let input_values = (eval_actual_params input_exprs r s h)
@@ -404,6 +400,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 	| Free(p) ->		let l = get_addr p r s
 							in (match l with 
 								Loc(v) -> h#show; h#delete l; print_string("Free("); print_int v; print_string (")\n"); h#show; s
+								| Null -> raise NULL_POINTER_EXCEPTION
 							)
 
 
@@ -427,4 +424,4 @@ let run prog =
     match prog with
         Program(vars,sub_progs,com) ->   let (r,s,h) = sub_prog_decl_eval sub_progs (dec_eval vars initenv initmem initheap)
                                          in (exec com r s h)
-      | Null -> initmem
+      | NoProg -> initmem

@@ -87,4 +87,4 @@ type sub_prog =
 (* programs *)
 type program =
 	  Program	of dec list * sub_prog list * cmd
-	| Null
+	| NoProg

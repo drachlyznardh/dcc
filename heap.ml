@@ -2,12 +2,14 @@ open Syntaxtree;;
 
 (* memory *)
 type loc =
-	Loc of int						(* Location, position *)
+	  Loc of int					(* Location, position *)
+	| Null							(* No location *)
 
 type value =
       ValueInt of int				(* Type integer with value *)
     | ValueFloat of float			(* Type float with value *)
-    | ValueLoc of loc				(* Type location with value *)
+    | StoreLoc of loc				(* Location in the Store space *)
+    | HeapLoc of loc				(* Location in the Heap space *)
 
 type store =
 	loc -> value					(* Store: location to simple values *)
@@ -43,10 +45,28 @@ exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
 exception NOT_A_POINTER				(* While calculating pointer's depth *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? *)
+exception NULL_POINTER_EXCEPTION
 exception LOL_DUNNO
 
+(* Get location value from StoreLoc and HeapLoc *)
+let get_loc (v:value) : loc = match v with
+	  StoreLoc(l) -> l
+	| HeapLoc(l) -> l
+	| _ -> raise (SYNTAX "Not a location")
+
+(* Get next location *)
 let nextloc (l:loc) : loc = 
-	match l with Loc(value) -> Loc(value + 1)
+	match l with
+		  Loc(value) -> Loc(value + 1)
+		| Null -> raise NULL_POINTER_EXCEPTION
+
+let print_loc (l:loc) = match l with
+	  Loc(v) -> print_int v
+	| Null -> print_string "Null"
+
+let string_of_loc (l:loc) = match l with
+	  Loc(v) -> string_of_int v
+	| Null -> "Null"
 
 (* Heap class *)
 class heap size = object (self)
@@ -100,10 +120,15 @@ class heap size = object (self)
 			print_string "\t";
 			match (l,h) with
 				(Loc(addr),HEntry(count,value)) -> (
-					match value with
-						  ValueLoc(Loc(v)) -> print_int addr; print_string ":"; print_int count; print_string ":loc("; print_int v; print_string ")\n"
-						| ValueInt(v) -> print_int addr; print_string ":"; print_int count; print_string ":int("; print_int v; print_string ")\n"
-						| ValueFloat(v) -> print_int addr; print_string ":"; print_int count; print_string ":flt("; print_float v; print_string ")\n")
+					print_int addr; print_string ":"; print_int count;
+					(match value with
+						  StoreLoc(v) -> print_string ":slc["; print_loc v;
+						| HeapLoc(v) -> print_string ":hlc["; print_loc v;
+						| ValueInt(v) -> print_string ":int["; print_int v;
+						| ValueFloat(v) -> print_string ":flt["; print_float v;
+					)
+				)
+				| (Null,_) -> raise NULL_POINTER_EXCEPTION
 		) in print_string "Heap:\n"; let length = Hashtbl.length htbl in if length = 0 then print_string "\tEmpty\n" else Hashtbl.iter lookat htbl 
 	)
 
