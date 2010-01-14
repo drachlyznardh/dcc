@@ -124,18 +124,21 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 					in aux p
     			   )
     | Malloc(t) -> (
-					match t with
+    				h#show;
+					(match t with
 						  Basic(b) ->	let l = h#newmem 1 in
+					  						print_string "Malloc(";
 					  						(match b with
-					  							  Int -> h#update l (ValueInt(0))
-					  							| Float -> h#update l (ValueFloat(0.0))
-					  						); print_string ("Malloc(Basic)"); ValueLoc(l)
+					  							  Int -> h#update l (ValueInt(0)); print_string "Int"
+					  							| Float -> h#update l (ValueFloat(0.0)); print_string "Flt"
+					  						); print_string (")\n"); h#show; ValueLoc(l)
 						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 						| Pointer(p) -> let l = h#newmem 1 in
 											(match p with 
 												_ -> h#update l (ValueLoc(Loc(0)))
-											); print_string ("Malloc(Pointer)"); ValueLoc(l)
+											); print_string ("Malloc(Pointer)\n"); h#show; ValueLoc(l)
 						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
+					)
     				)
     | Vec(v,i)  ->  (
                      match r(v) with
@@ -400,7 +403,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         )
 	| Free(p) ->		let l = get_addr p r s
 							in (match l with 
-								Loc(v) -> h#show; h#delete l; print_string("Free("); print_int v; print_string (")\n"); s
+								Loc(v) -> h#show; h#delete l; print_string("Free("); print_int v; print_string (")\n"); h#show; s
 							)
 
 

@@ -97,13 +97,14 @@ class heap size = object (self)
 	
 	method show = (
 		let lookat (l:loc) (h:hentry) = (
+			print_string "\t";
 			match (l,h) with
 				(Loc(addr),HEntry(count,value)) -> (
 					match value with
 						  ValueLoc(Loc(v)) -> print_int addr; print_string ":"; print_int count; print_string ":loc("; print_int v; print_string ")\n"
 						| ValueInt(v) -> print_int addr; print_string ":"; print_int count; print_string ":int("; print_int v; print_string ")\n"
 						| ValueFloat(v) -> print_int addr; print_string ":"; print_int count; print_string ":flt("; print_float v; print_string ")\n")
-		) in Hashtbl.iter lookat htbl 
+		) in print_string "Heap:\n"; let length = Hashtbl.length htbl in if length = 0 then print_string "\tEmpty\n" else Hashtbl.iter lookat htbl 
 	)
 
 end;;
