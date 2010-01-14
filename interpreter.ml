@@ -28,9 +28,9 @@ let newmem (s: store) : int =
 let rec updatemem_vector((s:store), addr, length, (v:value)) :store =
     match length with
           1 ->  updatemem(s,addr,v)
-        | n ->  let news = updatemem(s,addr,v)
+        | n ->  let s' = updatemem(s,addr,v)
                 in
-                    updatemem_vector(news,SLoc(newmem news),n-1,v)
+                    updatemem_vector(s',SLoc(newmem s'),n-1,v)
 
 (** START OF FUFFA **)
 
