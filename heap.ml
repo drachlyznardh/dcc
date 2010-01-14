@@ -63,16 +63,12 @@ class heap size = object (self)
 					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
 		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,nv))
 	)
-(*	
-	method updatevec (l:loc) (s:int) (nv:value) = (
-		if (s > 0) then
-			self#update l nv; self#updatevec (nextloc l) (s - 1) nv; ()
-	)
-*)
+
 	method get (l:loc) = Hashtbl.find htbl l
 	
 	method delete (l:loc) = Hashtbl.remove htbl l
 	
+	(* Increase counter for an HEntry *)
 	method bump (l:loc) = (
 		try (
 			let h = Hashtbl.find htbl l in (
@@ -82,6 +78,7 @@ class heap size = object (self)
 		) with Not_found -> ()
 	)
 	
+	(* Decrease counter for an HEntry: if 0, remove it *)
 	method sage (l:loc) = (
 		try (
 			let h = Hashtbl.find htbl l in (
@@ -96,6 +93,17 @@ class heap size = object (self)
 	method newmem size = (
 		let res = Loc(newcell) in
 			newcell <- newcell + size; res
+	)
+	
+	method show = (
+		let lookat (l:loc) (h:hentry) = (
+			match (l,h) with
+				(Loc(addr),HEntry(count,value)) -> (
+					match value with
+						  ValueLoc(Loc(v)) -> print_int addr; print_string ":"; print_int count; print_string ":loc("; print_int v; print_string ")\n"
+						| ValueInt(v) -> print_int addr; print_string ":"; print_int count; print_string ":int("; print_int v; print_string ")\n"
+						| ValueFloat(v) -> print_int addr; print_string ":"; print_int count; print_string ":flt("; print_float v; print_string ")\n")
+		) in Hashtbl.iter lookat htbl 
 	)
 
 end;;

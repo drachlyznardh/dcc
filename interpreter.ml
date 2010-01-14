@@ -129,12 +129,12 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 					  						(match b with
 					  							  Int -> h#update l (ValueInt(0))
 					  							| Float -> h#update l (ValueFloat(0.0))
-					  						); ValueLoc(l)
+					  						); print_string ("Malloc(Basic)"); ValueLoc(l)
 						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 						| Pointer(p) -> let l = h#newmem 1 in
 											(match p with 
 												_ -> h#update l (ValueLoc(Loc(0)))
-											); ValueLoc(l)
+											); print_string ("Malloc(Pointer)"); ValueLoc(l)
 						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
     				)
     | Vec(v,i)  ->  (
@@ -399,7 +399,9 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                             | _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
                         )
 	| Free(p) ->		let l = get_addr p r s
-							in h#delete l; s
+							in (match l with 
+								Loc(v) -> h#show; h#delete l; print_string("Free("); print_int v; print_string (")\n"); s
+							)
 
 
 (* execution of subprograms *)
