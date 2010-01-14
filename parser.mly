@@ -54,7 +54,7 @@ gType
     ;
 
 pType
-	: bType										  { SPointer($1) }
+	: CARET bType								  { SPointer($2) }
 	| CARET pType								  { MPointer($2) }
 
 bType
@@ -116,7 +116,7 @@ cmd_list
 lexp
     : ide                                         { LVar($1) }
     | ide LBRACKET aexp RBRACKET                  { LVec($1,$3) }
-    | CARET dexp_term							  { Lunref($2) }
+    | CARET dexp							  { Lunref($2) }
     ;
 
 bexp_factor
@@ -139,13 +139,13 @@ bexp
     | bexp_term                                   { $1 }
     ;
    
-rexp_term
+rexp
 	: ide										  { Sref($1) }
-    | AT rexp_term								  { Mref($2) }
+    | CARET rexp								  { Mref($2) }
     
-dexp_term
+dexp
 	: ide										  { Sunref($1) }
-	| CARET dexp_term							  { Munref($2) }
+	| AT dexp									  { Munref($2) }
 
 aexp_factor
     : NAT                                         { N($1) }
@@ -153,8 +153,8 @@ aexp_factor
     | ide                                         { Ident($1) }
     | ide LBRACKET aexp RBRACKET                  { Vec($1,$3) }
     | LP aexp RP                                  { $2 }
-    | AT rexp_term								  { Ref($2) }
-    | CARET dexp_term							  { Deref($2) }
+    | CARET rexp								  { Ref($2) }
+    | AT dexp									  { Deref($2) }
     ;
 
 aexp_term
