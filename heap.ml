@@ -86,7 +86,13 @@ class heap size = object (self)
 
 	method get (l:loc) = Hashtbl.find htbl l
 	
-	method delete (l:loc) = Hashtbl.remove htbl l
+	method delete (l:loc) = (
+		print_string "b4/";
+		self#show;
+		Hashtbl.remove htbl l;
+		print_string "af/";
+		self#show
+	)
 	
 	(* Increase counter for an HEntry *)
 	method bump (l:loc) = (

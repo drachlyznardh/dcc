@@ -77,7 +77,7 @@ let rec do_deref (depth:int) (l:loc) (s:store) : value =
 let get_addr (d:lexp) (r:env) (s:store) : loc = match d with
 	  LVar(id) -> (
 	  				match r(id) with
-	  					  Descr_Pntr(_,l) -> l
+	  					  Descr_Pntr(_,l) -> print_string ("Imma getting address"^(string_of_loc l)); l
 	  					| _ -> raise (SYNTAX "I don't like what you're trying to do...")
 	  			)
 	| LVec(v,off) -> raise (SYNTAX "Oh no you don't want to do that|")
@@ -400,7 +400,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         )
 	| Free(p) ->		let l = get_addr p r s
 							in (match l with 
-								Loc(v) -> h#show; h#delete l; print_string("Free("); print_int v; print_string (")\n"); h#show; s
+								Loc(v) -> print_string("Free("^(string_of_int v)^")\n"); h#delete l; s
 								| Null -> raise NULL_POINTER_EXCEPTION
 							)
 
