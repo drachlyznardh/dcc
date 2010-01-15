@@ -126,7 +126,8 @@ class heap size = object (self)
 						| HeapLoc(v) -> print_string ":hlc["; print_loc v;
 						| ValueInt(v) -> print_string ":int["; print_int v;
 						| ValueFloat(v) -> print_string ":flt["; print_float v;
-					)
+					);
+					print_string "]\n"
 				)
 				| (Null,_) -> raise NULL_POINTER_EXCEPTION
 		) in print_string "Heap:\n"; let length = Hashtbl.length htbl in if length = 0 then print_string "\tEmpty\n" else Hashtbl.iter lookat htbl 
