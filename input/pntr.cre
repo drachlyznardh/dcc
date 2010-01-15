@@ -11,19 +11,11 @@ begin
 
    x := 404.03456789;
    p := @x;
-   q := @p;
-   r := @q;
-   y := ^^^r;
 
    write(x);
    write(y);
    write(p);
    write(q);
-   write(r);
-   
-   z := 101.101;
-   write(z);
-   z := 7;
-   write(z)
+   write(r)
 
 end

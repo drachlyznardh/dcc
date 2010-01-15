@@ -12,6 +12,7 @@ exception UnknownChar;;
 let integer = '-'? ['0'-'9']+
 let real    = '-'? ['0'-'9']+['.']['0'-'9']*
 let ident   = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let whatever = '.'*
 
 (* RULES *)
 

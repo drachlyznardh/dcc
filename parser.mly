@@ -116,7 +116,7 @@ cmd_list
 lexp
     : ide                                         { LVar($1) }
     | ide LBRACKET aexp RBRACKET                  { LVec($1,$3) }
-    | CARET dexp							  { Lunref($2) }
+    | CARET dexp								  { Lunref($2) }
     ;
 
 bexp_factor
@@ -141,11 +141,11 @@ bexp
    
 rexp
 	: ide										  { Sref($1) }
-    | CARET rexp								  { Mref($2) }
+    | AT rexp									  { Mref($2) }
     
 dexp
 	: ide										  { Sunref($1) }
-	| AT dexp									  { Munref($2) }
+	| CARET dexp								  { Munref($2) }
 
 aexp_factor
     : NAT                                         { N($1) }
@@ -153,8 +153,8 @@ aexp_factor
     | ide                                         { Ident($1) }
     | ide LBRACKET aexp RBRACKET                  { Vec($1,$3) }
     | LP aexp RP                                  { $2 }
-    | CARET rexp								  { Ref($2) }
-    | AT dexp									  { Deref($2) }
+    | AT rexp									  { Ref($2) }
+    | CARET dexp								  { Deref($2) }
     ;
 
 aexp_term

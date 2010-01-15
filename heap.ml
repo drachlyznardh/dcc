@@ -44,7 +44,7 @@ exception PARAMETERS_DO_NOT_MATCH
 exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
 exception NOT_A_POINTER				(* While calculating pointer's depth *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
-exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? *)
+exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? Or maybe not? *)
 exception NULL_POINTER_EXCEPTION
 exception LOL_DUNNO
 
