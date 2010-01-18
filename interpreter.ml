@@ -40,10 +40,6 @@ let pntr_depth (p:pType) : int =
 		  SPointer(_) -> 0
 		| MPointer(next) -> 1 + (aux next)
 	in aux p
-	(*
-	let res = aux p
-	  	in print_string ("\nLOL puntatore di " ^ (string_of_int res) ^ " gradi\n"); res
-	*)
 
 let pntr_finaltype (p:pType) : bType =
 	let rec aux p = match p with
@@ -63,20 +59,9 @@ let pntr_get_data (p:dexp) (r:env) : (value * int) =
 		  				)
 		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
 	in aux p r
-
-let rec do_deref (depth:int) (l:loc) (s:store) : value = 
-	let res = s(l) in
-		if depth == 0 then 
-			res
-		else
-			match res with
-				  StoreLoc(newl) -> do_deref (depth - 1) newl s
-				| HeapLoc(newl) -> do_deref (depth - 1) newl s
-				| ValueInt(v) -> raise (SYNTAX ("Do_deref: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
-				| ValueFloat(v) -> raise (SYNTAX ("Do_deref: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
-
+	
 let rec do_deref_value (depth:int) (v:value) (s:store) (h:heap) : value = 
-	if depth == 0 then
+	if depth = 0 then
 		v
 	else match v with
 		  StoreLoc(l) -> do_deref_value (depth - 1) (s(l)) s h
@@ -147,12 +132,12 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 					  						(match b with
 					  							  Int -> h#set_value l (ValueInt(0)); print_string "Malloc(Int"
 					  							| Float -> h#set_value l (ValueFloat(0.0)); print_string "Malloc(Flt"
-					  						); print_string (")\n"); h#show; HeapLoc(l)
+					  						); print_string (")"^(string_of_value (HeapLoc(l)))^"\n"); h#show; HeapLoc(l)
 						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 						| Pointer(p) -> let l = h#newmem 1 in
 											(match p with 
 												_ -> h#set_value l (HeapLoc(Null))
-											); print_string ("Malloc(Pointer)\n"); h#show; HeapLoc(l)
+											); print_string ("Malloc(Pointer)"^(string_of_value (HeapLoc(l)))^"\n"); h#show; HeapLoc(l)
 						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
 					)
     				)
@@ -166,14 +151,6 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 												        else
 												            raise INDEX_OUT_OF_BOUNDS
 		                        	| _ -> raise INDEX_OUT_OF_BOUNDS
-(*
-								let ValueInt(pos) = (eval_aexp i r s h)
-		                        in
-		                            if (pos >= lb && pos <= ub) then
-		                                s(Loc(vo+pos))
-		                            else
-		                                raise INDEX_OUT_OF_BOUNDS
-*)
 							)
                         | _ -> raise (SYNTAX "Eval_aexp(Vec): Not a Descr_Vector")
                     )
@@ -183,12 +160,6 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
     | Sub (a,b) ->  aexp_op_fun a b r s h (-) (-.)
     
     | Mul (a,b) ->  aexp_op_fun a b r s h ( * ) ( *. )
-    				(*
-    				let mi a b = a*b
-                    in 
-                        let mf a b = a*.b
-                        in aexp_op_fun a b r s mi mf
-    				*)
     
     | Div (a,b) -> aexp_op_fun a b r s h (/) (/.)
 

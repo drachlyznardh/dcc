@@ -68,6 +68,12 @@ let string_of_loc (l:loc) = match l with
 	  Loc(v) -> string_of_int v
 	| Null -> "Null"
 
+let string_of_value (v:value) = match v with
+	  ValueInt(i) -> 	"Int"^(string_of_int i)
+	| ValueFloat(f) ->	"Flt"^(string_of_float f)
+	| StoreLoc(sl) -> 	"SLc"^(string_of_loc sl)
+	| HeapLoc(hl) -> 	"HLc"^(string_of_loc hl)
+
 (* Heap class *)
 class heap size = object (self)
 	

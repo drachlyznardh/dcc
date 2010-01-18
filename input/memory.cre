@@ -13,12 +13,13 @@ begin
 
    ^p := 102;
    x := ^p;
-   
+
    write(p);
+   write(^p);
    write(q);
    write(r);
 
-   write(100);
+   write(9001);
 
    write(^p);
    write(^q);
