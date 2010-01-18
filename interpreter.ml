@@ -52,12 +52,13 @@ let pntr_finaltype (p:pType) : bType =
 	in aux p
 
 (* Get final identifier name from a pointer *)
-let pntr_get_data (p:dexp) (r:env) : (loc * int) =
+let pntr_get_data (p:dexp) (r:env) : (value * int) =
 	let rec aux (p:dexp) (r:env) = match p with
 		  Sunref(id) -> (
 		  				match r(id) with
-		  					  Var(l) -> (l, 1)
-		  					| Descr_Pntr(n,l) -> (l,1)
+		  					  Var(l) -> (StoreLoc(l), 1)
+		  					| Val(v) -> (v,1)
+		  					| Descr_Pntr(n,l) -> (StoreLoc(l),1)
 		  					| _ -> raise LOL_DUNNO
 		  				)
 		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
@@ -83,11 +84,10 @@ let rec do_deref_value (depth:int) (v:value) (s:store) (h:heap) : value =
 		| ValueInt(v) -> raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
 		| ValueFloat(v) -> raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
-let get_addr (d:lexp) (r:env) (s:store) : loc = match d with
+let get_addr (d:lexp) (r:env) (s:store) (h:heap) : loc = match d with
 	  LVar(id) -> (
 	  				match r(id) with
-	  					  Descr_Pntr(_,l) ->	print_string ("Imma getting address"^(string_of_loc l)); 
-	  					  						(match s(l) with
+	  					  Descr_Pntr(_,l) ->	(match s(l) with
 	  					  							  HeapLoc(v) -> print_string ("HeapLoc["^(string_of_loc v)^"]"); v
 	  					  							| StoreLoc(v) -> print_string ("StoreLoc["^(string_of_loc v)^"]"); v
 	  					  							| _ -> raise (DEREF_ON_NOT_A_POINTER ("Get_addr["^(string_of_loc l)^"]"))
@@ -96,7 +96,7 @@ let get_addr (d:lexp) (r:env) (s:store) : loc = match d with
 	  			)
 	| LVec(v,off) -> raise (SYNTAX "Oh no you don't want to do that|")
 	| Lunref(p) ->	let (idaddr, depth) = pntr_get_data p r 
-	  					in let res = do_deref depth idaddr s
+	  					in let res = do_deref_value depth idaddr s h
 							in get_loc res
 
 (** END OF FUFFA **)
@@ -114,8 +114,8 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
                     )
     | Deref(p)  -> (
     				
-    				let (idaddr, depth) = pntr_get_data p r in
-    					let res = do_deref_value depth (StoreLoc(idaddr)) s h
+    				let (idaddr, depth) = (pntr_get_data p r) in
+    					let res = (do_deref_value depth idaddr s h)
     						in res
     			   )
     | Ref(p)    -> (
@@ -139,10 +139,9 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
     				h#show;
 					(match t with
 						  Basic(b) ->	let l = h#newmem 1 in
-					  						print_string "Malloc(";
 					  						(match b with
-					  							  Int -> h#bump l (ValueInt(0)); print_string "Int"
-					  							| Float -> h#bump l (ValueFloat(0.0)); print_string "Flt"
+					  							  Int -> h#bump l (ValueInt(0)); print_string "Malloc(Int"
+					  							| Float -> h#bump l (ValueFloat(0.0)); print_string "Malloc(Flt"
 					  						); print_string (")\n"); h#show; HeapLoc(l)
 						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 						| Pointer(p) -> let l = h#newmem 1 in
@@ -312,8 +311,6 @@ let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s:sto
 
 
 
-
-
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
     Ass(i,e)        ->  let ret = eval_aexp e r s h
@@ -323,7 +320,14 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                               LVar(id)  -> (
                                             match r(id) with
                                               Var(l)    -> updatemem(s,l,ret)
-                                            | Descr_Pntr(n,l) -> updatemem(s,l,ret)
+                                            | Descr_Pntr(_,l) ->	(match s(l) with
+                                            							  HeapLoc(hl) ->	h#sage hl;
+                                            							  					(match ret with
+                                            							  						HeapLoc(nl) -> h#bump nl (HeapLoc(Null)); s
+                                            							  						| _ -> updatemem (s,l,ret)
+                                            							  					)
+                                            							| _ -> updatemem(s,l,ret)
+                                            						)
                                             | _         -> (
 		                                        			match id with 
 		                                        				Ide(name) -> raise (SYNTAX ("Exec(Ass,LVar): Not a Variable("^name^")"))
@@ -346,7 +350,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                                                 | _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
                                              )
                         	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
-												let res = do_deref_value depth (StoreLoc(idaddr)) s h
+												let res = do_deref_value depth idaddr s h
 													in match res with 
 														  StoreLoc(l) -> updatemem(s,l,ret)
 														| HeapLoc(l) -> h#bump l ret; s
@@ -413,7 +417,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                                     raise PARAMETERS_DO_NOT_MATCH
                             | _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
                         )
-	| Free(p) ->		let l = get_addr p r s
+	| Free(p) ->		let l = (get_addr p r s h)
 							in (match l with 
 								Loc(v) -> print_string("Free("^(string_of_int v)^")\n"); h#sage l; s
 								| Null -> raise NULL_POINTER_EXCEPTION

@@ -87,7 +87,8 @@ class heap size = object (self)
 					| (ValueFloat(_),HEntry(c,ValueFloat(_))) -> Hashtbl.replace htbl l (HEntry(c + 1,nv))
 					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
 			)
-		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,nv))
+		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,nv));
+		self#show
 	)
 	
 	(* Decrease counter for an HEntry: if 0, remove it *)
@@ -99,7 +100,8 @@ class heap size = object (self)
 						if c = 0 then Hashtbl.remove htbl l
 						else Hashtbl.replace htbl l (HEntry(c - 1,v))
 			)
-		) with Not_found -> ()
+		) with Not_found -> ();
+		self#show
 	)
 	
 	method newmem size = (
