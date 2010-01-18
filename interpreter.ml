@@ -86,7 +86,12 @@ let rec do_deref_value (depth:int) (v:value) (s:store) (h:heap) : value =
 let get_addr (d:lexp) (r:env) (s:store) : loc = match d with
 	  LVar(id) -> (
 	  				match r(id) with
-	  					  Descr_Pntr(_,l) -> print_string ("Imma getting address"^(string_of_loc l)); l
+	  					  Descr_Pntr(_,l) ->	print_string ("Imma getting address"^(string_of_loc l)); 
+	  					  						(match s(l) with
+	  					  							  HeapLoc(v) -> print_string ("HeapLoc["^(string_of_loc v)^"]"); v
+	  					  							| StoreLoc(v) -> print_string ("StoreLoc["^(string_of_loc v)^"]"); v
+	  					  							| _ -> raise (DEREF_ON_NOT_A_POINTER ("Get_addr["^(string_of_loc l)^"]"))
+	  					  						)
 	  					| _ -> raise (SYNTAX "I don't like what you're trying to do...")
 	  			)
 	| LVec(v,off) -> raise (SYNTAX "Oh no you don't want to do that|")
@@ -136,13 +141,13 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 						  Basic(b) ->	let l = h#newmem 1 in
 					  						print_string "Malloc(";
 					  						(match b with
-					  							  Int -> h#update l (ValueInt(0)); print_string "Int"
-					  							| Float -> h#update l (ValueFloat(0.0)); print_string "Flt"
+					  							  Int -> h#bump l (ValueInt(0)); print_string "Int"
+					  							| Float -> h#bump l (ValueFloat(0.0)); print_string "Flt"
 					  						); print_string (")\n"); h#show; HeapLoc(l)
 						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 						| Pointer(p) -> let l = h#newmem 1 in
 											(match p with 
-												_ -> h#update l (HeapLoc(Loc(0)))
+												_ -> h#bump l (HeapLoc(Loc(0)))
 											); print_string ("Malloc(Pointer)\n"); h#show; HeapLoc(l)
 						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
 					)
@@ -410,7 +415,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         )
 	| Free(p) ->		let l = get_addr p r s
 							in (match l with 
-								Loc(v) -> print_string("Free("^(string_of_int v)^")\n"); h#delete l; s
+								Loc(v) -> print_string("Free("^(string_of_int v)^")\n"); h#sage l; s
 								| Null -> raise NULL_POINTER_EXCEPTION
 							)
 

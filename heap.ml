@@ -74,36 +74,20 @@ class heap size = object (self)
 	val mutable newcell = 0
 	val mutable htbl = (Hashtbl.create size : (loc, hentry) Hashtbl.t)
 	
-	method update (l:loc) (nv:value) = (
-		try (
-			let ov = Hashtbl.find htbl l in
-				match (nv,ov) with
-					  (ValueInt(_),HEntry(c,ValueInt(_))) -> Hashtbl.replace htbl l (HEntry(c,nv))
-					| (ValueFloat(_),HEntry(c,ValueFloat(_))) -> Hashtbl.replace htbl l (HEntry(c,nv))
-					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
-		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,nv))
-	)
-
 	method get (l:loc) = Hashtbl.find htbl l
 	method get_value (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(_,v) -> v
 	method get_count (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(c,_) -> c
 	
-	method delete (l:loc) = (
-		print_string "b4/";
-		self#show;
-		Hashtbl.remove htbl l;
-		print_string "af/";
-		self#show
-	)
-	
 	(* Increase counter for an HEntry *)
-	method bump (l:loc) (v:value) = (
+	method bump (l:loc) (nv:value) = (
 		try (
 			let h = Hashtbl.find htbl l in (
-				match h with
-					HEntry(c,v) -> Hashtbl.replace htbl l (HEntry(c + 1,v))
+				match (nv,h) with
+					  (ValueInt(_),HEntry(c,ValueInt(_))) -> Hashtbl.replace htbl l (HEntry(c + 1,nv))
+					| (ValueFloat(_),HEntry(c,ValueFloat(_))) -> Hashtbl.replace htbl l (HEntry(c + 1,nv))
+					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
 			)
-		) with Not_found -> ()
+		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,nv))
 	)
 	
 	(* Decrease counter for an HEntry: if 0, remove it *)
