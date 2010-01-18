@@ -14,7 +14,10 @@ let initenv (x:ide):env_entry = raise NO_IDE
 let initmem (x:loc):value = raise NO_MEM
 let initheap = new heap 16 (* Initial empty Heap *)
 
-let updatemem ((s:store), addr, (v:value)) :store = function
+let updatemem ((s:store), addr, (v:value)) :store = 
+
+	print_string ("["^(string_of_loc addr)^":"^(string_of_value v)^"]\n");
+	function
     x -> if (x = addr) then v else s(x)
 
 let updateenv ((e:env),id, (v:env_entry)) :env = function

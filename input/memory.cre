@@ -8,6 +8,7 @@ program
 begin
 
    p := malloc (int);
+   write(p);
    q := p;
    r := q;
 

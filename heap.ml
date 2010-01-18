@@ -74,6 +74,8 @@ let string_of_value (v:value) = match v with
 	| StoreLoc(sl) -> 	"SLc"^(string_of_loc sl)
 	| HeapLoc(hl) -> 	"HLc"^(string_of_loc hl)
 
+let check_loc (l:loc) = match l with Null -> raise (NULL_POINTER_EXCEPTION "Check_loc") | Loc(_) -> ();
+
 (* Heap class *)
 class heap size = object (self)
 	
@@ -85,6 +87,7 @@ class heap size = object (self)
 	method get_count (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(c,_) -> c
 	
 	method set_value (l:loc) (v:value) = (
+		check_loc l;
 		try (
 			let h = Hashtbl.find htbl l in (
 				match (v,h) with
@@ -97,6 +100,7 @@ class heap size = object (self)
 	
 	(* Increase counter for an HEntry *)
 	method bump (l:loc) = (
+		check_loc l;
 		try (
 			let HEntry(c,v) = Hashtbl.find htbl l in Hashtbl.remove htbl l; Hashtbl.replace htbl l (HEntry(c + 1,v))
 		) with Not_found -> (); self#show
@@ -104,6 +108,7 @@ class heap size = object (self)
 	
 	(* Decrease counter for an HEntry: if 0, remove it *)
 	method sage (l:loc) = (
+		check_loc l;
 		try (
 			let h = Hashtbl.find htbl l in (
 				match h with
