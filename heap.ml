@@ -85,6 +85,8 @@ class heap size = object (self)
 	)
 
 	method get (l:loc) = Hashtbl.find htbl l
+	method get_value (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(_,v) -> v
+	method get_count (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(c,_) -> c
 	
 	method delete (l:loc) = (
 		print_string "b4/";

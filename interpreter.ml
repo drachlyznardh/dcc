@@ -74,6 +74,15 @@ let rec do_deref (depth:int) (l:loc) (s:store) : value =
 				| ValueInt(v) -> raise (SYNTAX ("Do_deref: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
 				| ValueFloat(v) -> raise (SYNTAX ("Do_deref: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
+let rec do_deref_value (depth:int) (v:value) (s:store) (h:heap) : value = 
+	if depth == 0 then
+		v
+	else match v with
+		  StoreLoc(l) -> do_deref_value (depth - 1) (s(l)) s h
+		| HeapLoc(l) -> do_deref_value (depth - 1) (h#get_value l) s h
+		| ValueInt(v) -> raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
+		| ValueFloat(v) -> raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
+
 let get_addr (d:lexp) (r:env) (s:store) : loc = match d with
 	  LVar(id) -> (
 	  				match r(id) with
