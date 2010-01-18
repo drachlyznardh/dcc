@@ -110,7 +110,7 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
     | Deref(p)  -> (
     				
     				let (idaddr, depth) = pntr_get_data p r in
-    					let res = do_deref depth idaddr s
+    					let res = do_deref_value depth (StoreLoc(idaddr)) s h
     						in res
     			   )
     | Ref(p)    -> (
@@ -341,11 +341,12 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                                                 | _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
                                              )
                         	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
-												let res = do_deref depth idaddr s
+												let res = do_deref_value depth (StoreLoc(idaddr)) s h
 													in match res with 
 														  StoreLoc(l) -> updatemem(s,l,ret)
-														| ValueInt(l) -> updatemem(s,Loc(l),ret)
-														| _ -> raise LOL_DUNNO
+														| HeapLoc(l) -> h#bump l ret; s
+														| ValueInt(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
+														| ValueFloat(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
                         					)
                         )
     | Blk([])       ->  s

@@ -97,7 +97,7 @@ class heap size = object (self)
 	)
 	
 	(* Increase counter for an HEntry *)
-	method bump (l:loc) = (
+	method bump (l:loc) (v:value) = (
 		try (
 			let h = Hashtbl.find htbl l in (
 				match h with
