@@ -45,9 +45,8 @@ exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
 exception NOT_A_POINTER				(* While calculating pointer's depth *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? Or maybe not? *)
-exception NULL_POINTER_EXCEPTION
+exception NULL_POINTER_EXCEPTION	of string
 exception DOUBLE_FREE
-exception LOL_DUNNO
 
 (* Get location value from StoreLoc and HeapLoc *)
 let get_loc (v:value) : loc = match v with
@@ -59,7 +58,7 @@ let get_loc (v:value) : loc = match v with
 let nextloc (l:loc) : loc = 
 	match l with
 		  Loc(value) -> Loc(value + 1)
-		| Null -> raise NULL_POINTER_EXCEPTION
+		| Null -> raise (NULL_POINTER_EXCEPTION "nextloc")
 
 let print_loc (l:loc) = match l with
 	  Loc(v) -> print_int v
@@ -128,7 +127,7 @@ class heap size = object (self)
 					);
 					print_string "]\n"
 				)
-				| (Null,_) -> raise NULL_POINTER_EXCEPTION
+				| (Null,_) -> raise (NULL_POINTER_EXCEPTION "show")
 		) in print_string "Heap:\n"; let length = Hashtbl.length htbl in if length = 0 then print_string "\tEmpty\n" else Hashtbl.iter lookat htbl 
 	)
 

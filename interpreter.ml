@@ -59,7 +59,7 @@ let pntr_get_data (p:dexp) (r:env) : (value * int) =
 		  					  Var(l) -> (StoreLoc(l), 1)
 		  					| Val(v) -> (v,1)
 		  					| Descr_Pntr(n,l) -> (StoreLoc(l),1)
-		  					| _ -> raise LOL_DUNNO
+		  					| _ -> raise NOT_A_POINTER
 		  				)
 		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
 	in aux p r
@@ -124,7 +124,12 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 						  Sref(i) ->	(
 						  				match r(i) with 
 						  					  Var(l) -> StoreLoc(l) (* Return variable address *)
-							  				| Descr_Pntr(_,l) -> StoreLoc(l) (* Return pointer address *)
+							  				| Descr_Pntr(_,l) ->	(match s(l) with
+							  											  StoreLoc(v) -> s(v)
+							  											| HeapLoc(v) -> h#get_value v
+						  												| _ -> raise NOT_A_POINTER
+							  										)
+							  				(* Return pointer address *)
 							  				| Descr_Vector(l,_,_) -> StoreLoc(l) (* Return vector address *)
 							  				| _ ->
 							  					(
@@ -310,13 +315,15 @@ let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s:sto
         | _ -> raise (SYNTAX "Assign_values: Not a list")
 
 
-let move_pointer (l:loc) (v:value) (s:store) (h:heap) : store = match s(l) with
-	  HeapLoc(hl) ->	h#sage hl;
+let move_pointer (l:value) (v:value) (s:store) (h:heap) : store = match l with
+	  HeapLoc(hl) ->	h#sage hl; h#show;
 	  					(match v with
-	  						HeapLoc(nl) -> h#bump nl; s
-	  						| _ -> updatemem (s,l,v)
+	  						HeapLoc(nl) -> h#bump nl; h#show; s
+	  						| StoreLoc(sl) -> updatemem (s,sl,v)
+	  						| _ -> raise NOT_A_POINTER
 	  					)
-	| _ -> updatemem(s,l,v)
+	| StoreLoc(sl) ->	updatemem (s,sl,v)
+	| _ -> raise NOT_A_POINTER
 
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
@@ -327,7 +334,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                               LVar(id)  -> (
                                             match r(id) with
                                               Var(l)    -> updatemem(s,l,ret)
-                                            | Descr_Pntr(_,l) ->	move_pointer l ret s h
+                                            | Descr_Pntr(_,l) ->	move_pointer (s l) ret s h
                                             | _         -> (
 		                                        			match id with 
 		                                        				Ide(name) -> raise (SYNTAX ("Exec(Ass,LVar): Not a Variable("^name^")"))
@@ -352,8 +359,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
 												let res = do_deref_value depth idaddr s h
 													in match res with 
-														  StoreLoc(l) -> updatemem(s,l,ret)
-														| HeapLoc(l) -> move_pointer l ret s h
+														  StoreLoc(l) -> print_string "Lunref(SLc)\n";updatemem(s,l,ret)
+														| HeapLoc(l) -> print_string "Lunref(HLc)\n";move_pointer (h#get_value l) ret s h
 														| ValueInt(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
 														| ValueFloat(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
                         					)
@@ -420,7 +427,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 	| Free(p) ->		let l = (get_addr p r s h)
 							in (match l with 
 								Loc(v) -> print_string("Free("^(string_of_int v)^")\n"); h#sage l; s
-								| Null -> raise NULL_POINTER_EXCEPTION
+								| Null -> raise (NULL_POINTER_EXCEPTION "Free")
 							)
 
 
