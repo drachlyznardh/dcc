@@ -17,6 +17,7 @@ begin
    
    write(x);
    
+   free(p);
    write(^p);
    write(p);
    write(^q);

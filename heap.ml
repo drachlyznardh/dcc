@@ -46,6 +46,7 @@ exception NOT_A_POINTER				(* While calculating pointer's depth *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? Or maybe not? *)
 exception NULL_POINTER_EXCEPTION
+exception DOUBLE_FREE
 exception LOL_DUNNO
 
 (* Get location value from StoreLoc and HeapLoc *)
@@ -78,17 +79,22 @@ class heap size = object (self)
 	method get_value (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(_,v) -> v
 	method get_count (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(c,_) -> c
 	
-	(* Increase counter for an HEntry *)
-	method bump (l:loc) (nv:value) = (
+	method set_value (l:loc) (v:value) = (
 		try (
 			let h = Hashtbl.find htbl l in (
-				match (nv,h) with
-					  (ValueInt(_),HEntry(c,ValueInt(_))) -> Hashtbl.replace htbl l (HEntry(c + 1,nv))
-					| (ValueFloat(_),HEntry(c,ValueFloat(_))) -> Hashtbl.replace htbl l (HEntry(c + 1,nv))
+				match (v,h) with
+					  (ValueInt(_),HEntry(c,ValueInt(_))) -> Hashtbl.remove htbl l; Hashtbl.replace htbl l (HEntry(c,v))
+					| (ValueFloat(_),HEntry(c,ValueFloat(_))) -> Hashtbl.remove htbl l; Hashtbl.replace htbl l (HEntry(c,v))
 					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
 			)
-		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,nv));
-		self#show
+		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,v))
+	)
+	
+	(* Increase counter for an HEntry *)
+	method bump (l:loc) = (
+		try (
+			let HEntry(c,v) = Hashtbl.find htbl l in Hashtbl.remove htbl l; Hashtbl.replace htbl l (HEntry(c + 1,v))
+		) with Not_found -> (); self#show
 	)
 	
 	(* Decrease counter for an HEntry: if 0, remove it *)
@@ -97,11 +103,10 @@ class heap size = object (self)
 			let h = Hashtbl.find htbl l in (
 				match h with
 					HEntry(c,v) ->
-						if c = 0 then Hashtbl.remove htbl l
-						else Hashtbl.replace htbl l (HEntry(c - 1,v))
+						if c == 1 then (Hashtbl.remove htbl l; self#show)
+						else Hashtbl.replace htbl l (HEntry(c - 1,v)); self#show
 			)
-		) with Not_found -> ();
-		self#show
+		) with Not_found -> raise DOUBLE_FREE
 	)
 	
 	method newmem size = (

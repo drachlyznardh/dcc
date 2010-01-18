@@ -140,13 +140,13 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 					(match t with
 						  Basic(b) ->	let l = h#newmem 1 in
 					  						(match b with
-					  							  Int -> h#bump l (ValueInt(0)); print_string "Malloc(Int"
-					  							| Float -> h#bump l (ValueFloat(0.0)); print_string "Malloc(Flt"
+					  							  Int -> h#set_value l (ValueInt(0)); print_string "Malloc(Int"
+					  							| Float -> h#set_value l (ValueFloat(0.0)); print_string "Malloc(Flt"
 					  						); print_string (")\n"); h#show; HeapLoc(l)
 						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 						| Pointer(p) -> let l = h#newmem 1 in
 											(match p with 
-												_ -> h#bump l (HeapLoc(Loc(0)))
+												_ -> h#set_value l (HeapLoc(Null))
 											); print_string ("Malloc(Pointer)\n"); h#show; HeapLoc(l)
 						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
 					)
@@ -310,6 +310,13 @@ let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s:sto
         | _ -> raise (SYNTAX "Assign_values: Not a list")
 
 
+let move_pointer (l:loc) (v:value) (s:store) (h:heap) : store = match s(l) with
+	  HeapLoc(hl) ->	h#sage hl;
+	  					(match v with
+	  						HeapLoc(nl) -> h#bump nl; s
+	  						| _ -> updatemem (s,l,v)
+	  					)
+	| _ -> updatemem(s,l,v)
 
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
@@ -320,14 +327,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                               LVar(id)  -> (
                                             match r(id) with
                                               Var(l)    -> updatemem(s,l,ret)
-                                            | Descr_Pntr(_,l) ->	(match s(l) with
-                                            							  HeapLoc(hl) ->	h#sage hl;
-                                            							  					(match ret with
-                                            							  						HeapLoc(nl) -> h#bump nl (HeapLoc(Null)); s
-                                            							  						| _ -> updatemem (s,l,ret)
-                                            							  					)
-                                            							| _ -> updatemem(s,l,ret)
-                                            						)
+                                            | Descr_Pntr(_,l) ->	move_pointer l ret s h
                                             | _         -> (
 		                                        			match id with 
 		                                        				Ide(name) -> raise (SYNTAX ("Exec(Ass,LVar): Not a Variable("^name^")"))
@@ -353,7 +353,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 												let res = do_deref_value depth idaddr s h
 													in match res with 
 														  StoreLoc(l) -> updatemem(s,l,ret)
-														| HeapLoc(l) -> h#bump l ret; s
+														| HeapLoc(l) -> move_pointer l ret s h
 														| ValueInt(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
 														| ValueFloat(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
                         					)
