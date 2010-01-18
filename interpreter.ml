@@ -290,19 +290,15 @@ let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s:sto
 
 
 let move_pointer (l:value) (v:value) (s:store) (h:heap) : store = match l with
-	  HeapLoc(hl) ->	h#sage hl; h#show;
-	  					(match v with
-	  						HeapLoc(nl) -> h#bump nl; h#show; s
-	  						| StoreLoc(sl) -> updatemem (s,sl,v)
-	  						| _ -> raise NOT_A_POINTER
-	  					)
-	| StoreLoc(sl) ->	updatemem (s,sl,v)
-	| _ -> raise NOT_A_POINTER
+	  HeapLoc(hl) ->	let nl = (get_loc v) in h#sage hl; h#show; h#bump nl; h#show; updatemem (s,hl,v)
+	| StoreLoc(sl) ->	let nl = (get_loc v) in h#bump nl; h#show; updatemem (s,sl,v)
+	| _ ->				raise NOT_A_POINTER
 
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
     Ass(i,e)        ->  let ret = eval_aexp e r s h
-                        in 
+                        in
+                        print_string ("\t\t\t\t:="^(string_of_value ret)^"\n");
                         (
                          match i with
                               LVar(id)  -> (
