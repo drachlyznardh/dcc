@@ -11,7 +11,7 @@ type value =
     | StoreLoc of loc				(* Location in the Store space *)
     | HeapLoc of loc				(* Location in the Heap space *)
 
-type store =
+type _store =
 	loc -> value					(* Store: location to simple values *)
 
 type env_entry =
@@ -77,13 +77,15 @@ let string_of_value (v:value) = match v with
 let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ();
 
 (* Store class *)
-class _store size = object (self)
+class store size = object (self)
 
 	val mutable newcell = 0
 	val mutable stbl = (Hashtbl.create size : (loc, value) Hashtbl.t)
 
+	method newmem = let tmp = newcell in newcell = newcell +1; tmp
 	method get (l:loc) = Hashtbl.find stbl l
 	method update (l:loc) (v:value) = Hashtbl.remove stbl l; Hashtbl.replace stbl l v
+	method updatevec (l:loc) (s:int) (v:value) = Hashtbl.remove stbl l; Hashtbl.replace stbl l v
 
 end;;
 

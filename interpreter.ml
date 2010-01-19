@@ -13,29 +13,36 @@ open Mem;;
 let initenv (x:ide):env_entry = raise NO_IDE
 let initmem (x:loc):value = raise NO_MEM
 
-let initstore = new _store 16	(* Initially empty Store *)
+let initstore = new store 16	(* Initially empty Store *)
 let initheap = new heap 16		(* Initially empty Heap *)
 
-let updatemem ((s:store), addr, (v:value)) :store = 
-
-	print_string ("["^(string_of_loc addr)^":"^(string_of_value v)^"]\n");
+(*
+let updatemem ((s:store), (l:loc), (v:value)) :store = 
+	print_string ("["^(string_of_loc l)^":"^(string_of_value v)^"]\n");
 	function
-    x -> if (x = addr) then v else s(x)
+    x -> if (x = l) then v else s(x)
+*)
 
 let updateenv ((e:env),id, (v:env_entry)) :env = function
     y -> if (y = id) then v else e(y)
 
+(*
 let newmem (s: store) : int =   
     let rec aux n =
         try (let _=s(Loc(n)) in aux(n+1)) with NO_MEM -> n (* s(Loc(n)) la usiamo solo per leggere la memoria alla locazione n, così da vedere se quella locazione è non-valida (cioè libera), e quindi non ne consideriamo il valore *)
     in aux 0
+*)
 
+(*
 let rec updatemem_vector((s:store), addr, length, (v:value)) :store =
     match length with
-          1 ->  updatemem(s,addr,v)
-        | n ->  let news = updatemem(s,addr,v)
+          1 ->  s#update addr v; s
+(*          1 ->  s#update addr v; s *)
+(*        | n ->  let news = updatemem(s,addr,v) *)
+        | n ->  let news = s#update addr v
                 in
-                    updatemem_vector(news,Loc(newmem news),n-1,v)
+                    updatemem_vector(news,Loc(s#newmem news),n-1,v)
+*)
 
 (** START OF FUFFA **)
 
@@ -69,7 +76,7 @@ let rec do_deref_value (depth:int) (v:value) (s:store) (h:heap) : value =
 	if depth = 0 then
 		v
 	else match v with
-		  StoreLoc(l) -> do_deref_value (depth - 1) (s(l)) s h
+		  StoreLoc(l) -> do_deref_value (depth - 1) (s#get l) s h
 		| HeapLoc(l) -> do_deref_value (depth - 1) (h#get_value l) s h
 		| ValueInt(v) -> raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
 		| ValueFloat(v) -> raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
@@ -77,7 +84,7 @@ let rec do_deref_value (depth:int) (v:value) (s:store) (h:heap) : value =
 let get_addr (d:lexp) (r:env) (s:store) (h:heap) : loc = match d with
 	  LVar(id) -> (
 	  				match r(id) with
-	  					  Descr_Pntr(_,l) ->	(match s(l) with
+	  					  Descr_Pntr(_,l) ->	(match (s#get l) with
 	  					  							  HeapLoc(v) -> print_string ("HeapLoc["^(string_of_loc v)^"]"); v
 	  					  							| StoreLoc(v) -> print_string ("StoreLoc["^(string_of_loc v)^"]"); v
 	  					  							| _ -> raise (DEREF_ON_NOT_A_POINTER ("Get_addr["^(string_of_loc l)^"]"))
@@ -97,9 +104,9 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
     | R(n)      ->  ValueFloat(n)
     | Ident(i)  ->  (
                      match r(i) with
-                          Var(l) -> s(l)
+                          Var(l) -> s#get l
                         | Val(v) -> v
-                        | Descr_Pntr(n,l) -> s(l)
+                        | Descr_Pntr(n,l) -> s#get l
                         | _ -> match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
     | Deref(p)  -> (
@@ -114,8 +121,8 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 						  Sref(i) ->	(
 						  				match r(i) with 
 						  					  Var(l) -> StoreLoc(l) (* Return variable address *)
-							  				| Descr_Pntr(_,l) ->	(match s(l) with
-							  											  StoreLoc(v) -> s(v)
+							  				| Descr_Pntr(_,l) ->	(match s#get l with
+							  											  StoreLoc(v) -> s#get v
 							  											| HeapLoc(v) -> h#get_value v
 						  												| _ -> raise NOT_A_POINTER
 							  										)
@@ -152,7 +159,7 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 							(
 								let res = (eval_aexp i r s h) in match res with 
 									  ValueInt(pos) ->	if (pos >= lb && pos <= ub) then
-		                                					s(Loc(vo+pos))
+		                                					s#get (Loc(vo+pos))
 												        else
 												            raise INDEX_OUT_OF_BOUNDS
 		                        	| _ -> raise INDEX_OUT_OF_BOUNDS
@@ -200,11 +207,13 @@ let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
 (* evaluation of declarations *)
 let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
       []                        ->  (r,s,h)
-    | Dec(x,Basic(tipo))::decls ->  let newaddr = newmem s
+    | Dec(x,Basic(tipo))::decls ->  let newaddr = s#newmem
                                     in (
                                          match tipo with
-                                              Int   -> dec_eval decls (updateenv(r,x,Var(Loc(newaddr)))) (updatemem(s,Loc(newaddr),ValueInt(0))) h
-                                            | Float -> dec_eval decls (updateenv(r,x,Var(Loc(newaddr)))) (updatemem(s,Loc(newaddr),ValueFloat(0.0))) h
+                                              Int   ->	s#update (Loc(newaddr)) (ValueInt(0));
+                                              			dec_eval decls (updateenv(r,x,Var(Loc(newaddr)))) s h
+                                            | Float ->	s#update (Loc(newaddr)) (ValueFloat(0.0));
+                                            			dec_eval decls (updateenv(r,x,Var(Loc(newaddr)))) s h
                                         )
     | Dec(x,Const(tipo,valore_exp))::decls  
                                 ->  let valore = eval_aexp valore_exp r s h in
@@ -214,25 +223,26 @@ let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
                                 			| (_,_) -> raise DIFFERENT_TYPE_ASSIGNATION
                                 		)
     | Dec(x,Pointer(pcontent))::decls ->
-    		let newaddr = newmem s
+    		let newaddr = s#newmem
     			and depth = pntr_depth pcontent
     		in (
     			(* print_string ("New Descr_Pntr(" ^ (string_of_int depth) ^ ", " ^ (string_of_int newaddr) ^ ")"); *)
-    			dec_eval decls (updateenv(r,x,Descr_Pntr(depth,Loc(newaddr)))) (updatemem(s,Loc(newaddr),StoreLoc(Null))) h
+    			s#update (Loc(newaddr)) (StoreLoc(Null));
+    			dec_eval decls (updateenv(r,x,Descr_Pntr(depth,Loc(newaddr)))) s h
     		)
     | Dec(x,Vector(tipo,lb,ub))::decls
-                                ->  let newaddr = newmem s
+                                ->  let newaddr = s#newmem
                                     and dim = ub - lb + 1
                                     in
                                     let vo = Loc(newaddr - lb)
                                     in
                                     (
                                       match tipo with
-                                          Int -> dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) (updatemem_vector(s,Loc(newaddr),dim,ValueInt(0))) h
-                                        | Float -> dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) (updatemem_vector(s,Loc(newaddr),dim,ValueFloat(0.0))) h
+                                          Int ->	s#updatevec (Loc(newaddr)) dim (ValueInt(0));
+                                          			dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) s h
+                                        | Float ->	s#updatevec (Loc(newaddr)) dim (ValueFloat(0.0));
+                                        			dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) s h
                                     )
-
-
 
 (* declaration of subprograms *)
 let rec sub_prog_decl_eval (d: sub_prog list) ((r:env),(s:store),(h:heap)) = match d with
@@ -285,15 +295,15 @@ let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s:sto
             in
                 (
                  match r'(id) with
-                      Var(l) -> (r',updatemem(s',l,v),h)
+                      Var(l) -> s#update l v; (r',s,h)
                     | _ -> raise (SYNTAX "Assign_values: Not a Variable")
                 )
         | _ -> raise (SYNTAX "Assign_values: Not a list")
 
 
 let move_pointer (l:value) (v:value) (s:store) (h:heap) : store = match l with
-	  HeapLoc(hl) ->	let nl = (get_loc v) in h#sage hl; h#show; h#bump nl; h#show; updatemem (s,hl,v)
-	| StoreLoc(sl) ->	let nl = (get_loc v) in h#bump nl; h#show; updatemem (s,sl,v)
+	  HeapLoc(hl) ->	let nl = (get_loc v) in h#sage hl; h#show; h#bump nl; h#show; s#update hl v; s
+	| StoreLoc(sl) ->	let nl = (get_loc v) in h#bump nl; h#show; s#update sl v; s
 	| _ ->				raise NOT_A_POINTER
 
 (* execution of commands *)
@@ -305,8 +315,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                          match i with
                               LVar(id)  -> (
                                             match r(id) with
-                                              Var(l)    -> updatemem(s,l,ret)
-                                            | Descr_Pntr(_,l) ->	move_pointer (s l) ret s h
+                                              Var(l)    -> s#update l ret; s
+                                            | Descr_Pntr(_,l) ->	move_pointer (s#get l) ret s h
                                             | _         -> (
 		                                        			match id with 
 		                                        				Ide(name) -> raise (SYNTAX ("Exec(Ass,LVar): Not a Variable("^name^")"))
@@ -320,7 +330,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 		                                                	(match res with 
 		                                                		  ValueInt(pos) ->
 						                                                if (pos >= lb && pos <= ub)
-						                                                	then updatemem(s,Loc(vo+pos),ret)
+						                                                	then (s#update (Loc(vo+pos)) ret; s)
 								                                        else 
 								                                            raise INDEX_OUT_OF_BOUNDS
 		                                                       	| _ -> raise INDEX_OUT_OF_BOUNDS
@@ -331,7 +341,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
 												let res = do_deref_value depth idaddr s h
 													in match res with 
-														  StoreLoc(l) -> print_string "Lunref(SLc)\n";updatemem(s,l,ret)
+														  StoreLoc(l) -> print_string "Lunref(SLc)\n"; s#update l ret; s
 														| HeapLoc(l) -> print_string "Lunref(HLc)\n";move_pointer (h#get_value l) ret s h
 														| ValueInt(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
 														| ValueFloat(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
@@ -348,15 +358,16 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
     | For(i,valmin_exp,valmax_exp,c) 
                     ->  let valmin = eval_aexp valmin_exp r s h
                         and update_counter l s =
-                            match s(l) with
-                              ValueInt(n) -> updatemem(s, l, ValueInt(n + 1))
+                            match (s#get l) with
+                              ValueInt(n) -> s#update l (ValueInt(n + 1)); s
                             | _ -> raise (SYNTAX "Use an integer for your counter, do NOT use other stuff")
                         in 
                         (
                          match r(i) with
                               Var(l) -> 
                                 (
-                                let s0 = updatemem(s, l, valmin)
+                                s#update l valmin;
+                                let s0 = s
                                 in
                                     let rec exec_for s =
                                         let s' = exec c r s h
@@ -421,6 +432,6 @@ and exec_proc (ee:env_entry) (input_values:value list) (r: env) (s: store) (h:he
 (* evaluation of programs *)
 let run prog = 
     match prog with
-        Program(vars,sub_progs,com) ->   let (r,s,h) = sub_prog_decl_eval sub_progs (dec_eval vars initenv initmem initheap)
+        Program(vars,sub_progs,com) ->   let (r,s,h) = sub_prog_decl_eval sub_progs (dec_eval vars initenv initstore initheap)
                                          in (exec com r s h)
-      | NoProg -> initmem
+      | NoProg -> initstore
