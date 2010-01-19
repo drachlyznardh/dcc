@@ -3,7 +3,7 @@
 (*          (2007)Revisione (Stefano Schivo)         *)
 
 open Syntaxtree;;
-open Heap;;
+open Mem;;
 
 (******************************)
 
@@ -12,7 +12,9 @@ open Heap;;
 (* utility functions *)
 let initenv (x:ide):env_entry = raise NO_IDE
 let initmem (x:loc):value = raise NO_MEM
-let initheap = new heap 16 (* Initial empty Heap *)
+
+let initstore = new _store 16	(* Initially empty Store *)
+let initheap = new heap 16		(* Initially empty Heap *)
 
 let updatemem ((s:store), addr, (v:value)) :store = 
 

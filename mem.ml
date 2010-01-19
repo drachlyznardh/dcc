@@ -76,6 +76,17 @@ let string_of_value (v:value) = match v with
 
 let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ();
 
+(* Store class *)
+class _store size = object (self)
+
+	val mutable newcell = 0
+	val mutable stbl = (Hashtbl.create size : (loc, value) Hashtbl.t)
+
+	method get (l:loc) = Hashtbl.find stbl l
+	method update (l:loc) (v:value) = Hashtbl.remove stbl l; Hashtbl.replace stbl l v
+
+end;;
+
 (* Heap class *)
 class heap size = object (self)
 	
