@@ -101,18 +101,18 @@ class store size = object (self)
 		Hashtbl.find stbl l
 	)
 
-	method update (l:loc) (v:value) = (
+	method set (l:loc) (v:value) = (
 		check_loc l "Store#update";
 		Hashtbl.remove stbl l; Hashtbl.replace stbl l v;
 		self#show
 	)
 
-	method updatevec (l:loc) (s:int) (v:value) = (
+	method setvec (l:loc) (s:int) (v:value) = (
 		match s with
-			  1 ->	self#update l v
-			| n ->	self#update l v;
+			  1 ->	self#set l v
+			| n ->	self#set l v;
 					let nl = self#newmem in
-						self#updatevec nl (s - 1) v  
+						self#setvec nl (s - 1) v  
 	)
 
 	method show = (
@@ -140,7 +140,7 @@ class heap size = object (self)
 	method get (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(_,v) -> v
 	method get_count (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(c,_) -> c
 	
-	method set_value (l:loc) (v:value) = (
+	method set (l:loc) (v:value) = (
 		check_loc l "set_value";
 		try (
 			let h = Hashtbl.find htbl l in (
@@ -151,7 +151,7 @@ class heap size = object (self)
 																	Hashtbl.replace htbl l (HEntry(c,v))
 					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
 			)
-		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,v))
+		) with Not_found -> Hashtbl.replace htbl l (HEntry(0,v))
 	)
 	
 	(* Increase counter for an HEntry *)
@@ -177,8 +177,8 @@ class heap size = object (self)
 		) with Not_found -> raise DOUBLE_FREE
 	)
 	
-	method newmem size = (
-		newcell <- newcell + size;
+	method newmem = (
+		newcell <- newcell + 1;
 		Loc(newcell)
 	)
 	
