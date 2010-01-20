@@ -72,12 +72,12 @@ let pntr_get_data (p:dexp) (r:env) : (value * int) =
 		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
 	in aux p r
 	
-let rec do_deref_value (depth:int) (v:value) (s:store) (h:heap) : value = 
+let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value = 
 	if depth = 0 then
 		v
 	else match v with
-		  StoreLoc(l) -> do_deref_value (depth - 1) (s#get l) s h
-		| HeapLoc(l) -> do_deref_value (depth - 1) (h#get l) s h
+		  StoreLoc(l) -> do_deref (depth - 1) (s#get l) s h
+		| HeapLoc(l) -> do_deref (depth - 1) (h#get l) s h
 		| ValueInt(v) -> raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
 		| ValueFloat(v) -> raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
@@ -93,7 +93,7 @@ let get_addr (d:lexp) (r:env) (s:store) (h:heap) : loc = match d with
 	  			)
 	| LVec(v,off) -> raise (SYNTAX "Oh no you don't want to do that|")
 	| Lunref(p) ->	let (idaddr, depth) = pntr_get_data p r 
-	  					in let res = do_deref_value depth idaddr s h
+	  					in let res = do_deref depth idaddr s h
 							in get_loc res
 
 (* Where is this identifier's value saved? *)
@@ -123,34 +123,8 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
                         | Descr_Pntr(n,l) -> s#get l
                         | _ -> match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
-    | Deref(p)  -> (
-    				
-    				let (idaddr, depth) = (pntr_get_data p r) in
-    					let res = (do_deref_value depth idaddr s h)
-    						in res
-    			   )
-    | Ref(p)    -> (
-    	
-					let rec aux (p:rexp) : value = match p with
-						  Sref(i) ->	(
-						  				match r(i) with 
-						  					  Var(l) -> StoreLoc(l) (* Return variable address *)
-							  				| Descr_Pntr(_,l) ->	(match s#get l with
-							  											  StoreLoc(v) -> s#get v
-							  											| HeapLoc(v) -> h#get v
-						  												| _ -> raise NOT_A_POINTER
-							  										)
-							  				(* Return pointer address *)
-							  				| Descr_Vector(l,_,_) -> StoreLoc(l) (* Return vector address *)
-							  				| _ ->
-							  					(
-							  						match i with
-							  							Ide(name) -> raise (SYNTAX ("Eval_aexp(Ref): Not a Descr_Pntr ("^name^")"))
-							  					)
-						  				)
-(*						| Mref(next) -> aux next *)
-					in aux p
-    			   )
+    | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in do_deref depth idaddr s h
+    | Ref(i)    ->	get_residence i r
     | Malloc(t) -> (
     				h#show;
 					(match t with
@@ -348,7 +322,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                                                 | _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
                                              )
                         	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
-												let res = do_deref_value depth idaddr s h
+												let res = do_deref depth idaddr s h
 													in match res with 
 														  StoreLoc(l) -> s#update l ret; s
 														| HeapLoc(l) -> move_pointer (h#get l) ret s h

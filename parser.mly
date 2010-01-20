@@ -139,9 +139,6 @@ bexp
     | bexp_term                                   { $1 }
     ;
    
-rexp
-	: ide										  { Sref($1) }
-    
 dexp
 	: ide										  { Sunref($1) }
 	| CARET dexp								  { Munref($2) }
@@ -152,8 +149,8 @@ aexp_factor
     | ide                                         { Ident($1) }
     | ide LBRACKET aexp RBRACKET                  { Vec($1,$3) }
     | LP aexp RP                                  { $2 }
-    | AT rexp									  { Ref($2) }
-    | CARET dexp								  { Deref($2) }
+    | AT ide									  { Ref($2) }
+    | CARET dexp								  { Unref($2) }
     ;
 
 aexp_term
