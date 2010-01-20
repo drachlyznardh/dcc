@@ -1,0 +1,89 @@
+
+\documentclass[a4paper, 12pt, bookmarks, openany]{article}
+
+\usepackage[latin1]{inputenc}
+\usepackage[italian]{babel}
+\usepackage[pdftex,bookmarks=true,pdfborder={0 0 0}]{hyperref}
+\usepackage{listings}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{slashed}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+
+\hypersetup {
+	pdfauthor={Ivan Simonini},
+	pdftitle={Linguaggi Formali e Compilatori},
+	pdfsubject={Questa dev'essere l'ultima volta che seguo il corso}
+}
+
+\begin{document}
+\title{DCC - Dynamic Creme Caramel}
+\author{Ivan Simonini}
+\maketitle
+
+\section{Scelta del progetto}
+I puntatori sono una buona cosa per qualunque linguaggio. Non sono
+estremamente complessi da realizzare. Lo heap si rende necessario per
+l'utilizzo dinamico della memoria, reso possibile dai puntatori. Il
+conteggio dei riferimenti \`e un approccio pi\`u elegante e pulito rispetto
+alla dimenticanza permessa dal garbage colletion.
+
+\section{Ridefinizione delle strutture}
+Avendo a disposizione gli oggetti dell'OCaml, \'e comodo usarli per
+semplificare e nascondere - dove possibile - il modo in cui le cose
+funzionano veramente, perch\'e quello strato non \`e di diretta competenza e
+sinceramente sono pi\'c contento di avere un oggetto con memoria, scelta che
+riduce lo spreco di memoria (almeno credo) ed anche il numero di parametri.
+
+\section{Realizzazione dei puntatori}
+Oltre all'ovvia modifica al parser e all'albero di sintassi, realizzata come
+visto in classe durante il corso, il puntatore non \'e che un
+valore-locazione, ossia un indice di cella. Il descrittore di un puntatore,
+oltre al tipo finale puntato (un gType, prossimamente), la profondit\`a del
+puntatore stesso, ossia il numero di CARET e il massimo numero di
+derefenziazioni.
+
+Il nodo sintattico DeRef \`e una struttura che conta il numero di CARET che
+precedono un identificatore. Se questo numero \`e minore o uguale alla
+profondit\`a del puntatore identificato (ovviamente, soltanto se esso \`e un
+puntatore), allora il metodo do\_defer\_value raggiunge la cella
+corrispondente e procede a seguire il percorso indicato.
+
+Il nodo sintattico Ref associa - direttamente nell'ambiente - la cella di
+residenza di un identificatore (presente nel suo descrittore) qualora questo
+non sia una costante.
+
+\section{Realizzazione dello Heap}
+Sostanzialmente analogo allo Store, lo heap \`e realizzato mediante
+un'hashtable che associa locazioni a valori. Questa volta l'associazione non
+avviene in un solo passo, poich\`e lo Heap ha la responsabilit\`a, come
+obiettivo del progetto d'esame, di conteggiare i riferimenti alla cella.
+Ogni descrittore - il tipo HEntry, Heap Entry - include un intero,
+inizializzato a 0 al momento della creazione ed opportunamente manipolato
+ad ogni modifica, che conta il numero di puntatori ad essa collegati.
+
+\section{Malloc e Free}
+Prendendo come modello il lunguaggio C, le primitive di richiesta di
+allocazione e di deallocazione sono state chiamate Malloc e Free.
+
+La Malloc
+\`e una speciale espressione aritmentica che ha il compito di fare da parte
+destra di un'assegnazione a puntatore, restituendo il valore locazione della
+prima cella allocata. Essa comporta la creazione di una o pi\`u celle nello
+Heap il cui conteggio iniziale \`e pari a zero. Se il valore viene assegnato
+ad un puntatore adatto, questo valore diventa immediatamente 1. Le celle
+pendenti a zero riferimenti sono patibili di riallocazione.
+
+La Free
+\`e un comando che si occupa distruggere una zona allocata,
+INDIPENDENTEMENTE da quanti riferimenti ad essa esistano attualmente.
+
+\section{Concatenazione (virtuale) di Store e Heap}
+Grazie alla diversificazione tra StoreLoc e HeapLoc, \`e possibile
+raggruppare virtualmente le due zone di memoria per ottenere un accesso alla
+cella puntata tramite un puntatore.
+
+\end{document}
