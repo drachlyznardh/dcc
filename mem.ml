@@ -23,6 +23,16 @@ type env_entry =
 type env =
 	ide -> env_entry				(* Environment entries *)
 
+type rentry =
+	  RVar of bType * loc			(* Variabile with type and residence *)
+	| RVal of value					(* Constant value *)
+	| RDescr_Pntr of
+		bType * int * loc			(* Pointer with final type, depth and residence *)
+	| RDescr_Vctr of
+		bType * int * int * loc		(* Vector with final type, bounds and residence *)
+	| RDescr_Prcd of
+		param list * dec list * cmd	(* Procedure with parameters, declarations and body *)
+
 type hentry =
 	HEntry of int * value
 
@@ -81,6 +91,24 @@ let string_of_value (v:value) = match v with
 let print_value (v:value) = print_string (string_of_value v)
 
 let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ();
+
+(* Heap class *)
+class renv size = object (self)
+
+	val mutable rtbl = [(Hashtbl.create size : (ide, rentry) Hashtbl.t)]
+	
+	method push = (
+		let nt = (Hashtbl.create 4 : (ide,rentry) Hashtbl.t) in
+			rtbl <- nt::rtbl
+	)
+	
+	method pop = (
+		match rtbl with
+			  [] ->			();
+			| head::tail ->	Hashtbl.clear head; rtbl <- tail
+	)
+
+end;;
 
 (* Store class *)
 class store size = object (self)
