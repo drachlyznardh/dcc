@@ -306,7 +306,6 @@ let move_pointer (l:value) (v:value) (s:store) (h:heap) : store = match l with
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
     Ass(i,e)        ->  let ret = eval_aexp e r s h
                         in
-                        print_string ("\t\t\t\t:="^(string_of_value ret)^"\n");
                         (
                          match i with
                               LVar(id)  -> (
