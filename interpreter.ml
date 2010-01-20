@@ -77,7 +77,7 @@ let rec do_deref_value (depth:int) (v:value) (s:store) (h:heap) : value =
 		v
 	else match v with
 		  StoreLoc(l) -> do_deref_value (depth - 1) (s#get l) s h
-		| HeapLoc(l) -> do_deref_value (depth - 1) (h#get_value l) s h
+		| HeapLoc(l) -> do_deref_value (depth - 1) (h#get l) s h
 		| ValueInt(v) -> raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
 		| ValueFloat(v) -> raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
@@ -95,6 +95,20 @@ let get_addr (d:lexp) (r:env) (s:store) (h:heap) : loc = match d with
 	| Lunref(p) ->	let (idaddr, depth) = pntr_get_data p r 
 	  					in let res = do_deref_value depth idaddr s h
 							in get_loc res
+
+(* Where is this identifier's value saved? *)
+let get_residence (i:ide) (r:env) :value = match r i with
+	  Var(l) -> StoreLoc(l)
+	| Val(_) -> raise (RESIDENT_EVIL "It's a Constant!")
+	| Descr_Pntr(_,l) -> StoreLoc(l)
+	| Descr_Vector(l,_,_) -> StoreLoc(l)
+	| Descr_Procedure(_,_,_) -> raise (RESIDENT_EVIL "It's a Procedure!")
+
+(* I need THAT value, I don't mind where is it saved. *)
+let get_value (l:value) (s:store) (h:heap) :value = match l with
+	  StoreLoc(sl) ->	s#get sl
+	| HeapLoc(hl) ->	h#get hl
+	| _ -> raise (MY_FAULT "get_value")
 
 (** END OF FUFFA **)
 
@@ -123,7 +137,7 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 						  					  Var(l) -> StoreLoc(l) (* Return variable address *)
 							  				| Descr_Pntr(_,l) ->	(match s#get l with
 							  											  StoreLoc(v) -> s#get v
-							  											| HeapLoc(v) -> h#get_value v
+							  											| HeapLoc(v) -> h#get v
 						  												| _ -> raise NOT_A_POINTER
 							  										)
 							  				(* Return pointer address *)
@@ -337,7 +351,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 												let res = do_deref_value depth idaddr s h
 													in match res with 
 														  StoreLoc(l) -> s#update l ret; s
-														| HeapLoc(l) -> move_pointer (h#get_value l) ret s h
+														| HeapLoc(l) -> move_pointer (h#get l) ret s h
 														| ValueInt(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
 														| ValueFloat(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
                         					)

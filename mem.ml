@@ -34,6 +34,7 @@ type hentry =
 (* exception *)
 exception NO_MEM
 exception NO_IDE
+exception RESIDENT_EVIL				of string (* Constant and Procedure don't have a residence cell in Store *)
 exception SYNTAX					of string
 exception INDEX_OUT_OF_BOUNDS
 exception DIFFERENT_TYPE_OPERATION
@@ -47,6 +48,7 @@ exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? Or maybe not? *)
 exception NULL_POINTER_EXCEPTION	of string
 exception DOUBLE_FREE
+exception MY_FAULT					of string	(* Error due to interpreter malfunction *)
 
 (* Get location value from StoreLoc and HeapLoc *)
 let get_loc (v:value) : loc = match v with
@@ -135,8 +137,7 @@ class heap size = object (self)
 	val mutable newcell = -1
 	val mutable htbl = (Hashtbl.create size : (loc, hentry) Hashtbl.t)
 	
-	method get (l:loc) = Hashtbl.find htbl l
-	method get_value (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(_,v) -> v
+	method get (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(_,v) -> v
 	method get_count (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(c,_) -> c
 	
 	method set_value (l:loc) (v:value) = (
