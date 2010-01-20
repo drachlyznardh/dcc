@@ -87,6 +87,27 @@ class store size = object (self)
 	method update (l:loc) (v:value) = Hashtbl.remove stbl l; Hashtbl.replace stbl l v
 	method updatevec (l:loc) (s:int) (v:value) = Hashtbl.remove stbl l; Hashtbl.replace stbl l v
 
+	method show = (
+		let lookat (l:loc) (v:value) = (
+			print_string "\t";
+			match l with
+				Loc(addr) ->	(print_int addr;
+								(match v with
+									  StoreLoc(v) ->	print_string ":slc["; print_loc v;
+									| HeapLoc(v) ->		print_string ":hlc["; print_loc v;
+									| ValueInt(v) ->	print_string ":int["; print_int v;
+									| ValueFloat(v) ->	print_string ":flt["; print_float v;
+								);
+								print_string "]\n"
+								)
+				| Null -> raise (NULL_POINTER_EXCEPTION "Store#show")
+		) in
+			print_string "Store:\n";
+			let length = Hashtbl.length stbl in
+				if length = 0 then print_string "\tEmpty\n"
+				else Hashtbl.iter lookat stbl 
+	)
+
 end;;
 
 (* Heap class *)
@@ -104,8 +125,10 @@ class heap size = object (self)
 		try (
 			let h = Hashtbl.find htbl l in (
 				match (v,h) with
-					  (ValueInt(_),HEntry(c,ValueInt(_))) -> Hashtbl.remove htbl l; Hashtbl.replace htbl l (HEntry(c,v))
-					| (ValueFloat(_),HEntry(c,ValueFloat(_))) -> Hashtbl.remove htbl l; Hashtbl.replace htbl l (HEntry(c,v))
+					  (ValueInt(_),HEntry(c,ValueInt(_))) ->		Hashtbl.remove htbl l;
+					  												Hashtbl.replace htbl l (HEntry(c,v))
+					| (ValueFloat(_),HEntry(c,ValueFloat(_))) ->	Hashtbl.remove htbl l;
+																	Hashtbl.replace htbl l (HEntry(c,v))
 					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
 			)
 		) with Not_found -> Hashtbl.replace htbl l (HEntry(1,v))
@@ -115,7 +138,9 @@ class heap size = object (self)
 	method bump (l:loc) = (
 		check_loc l "bump";
 		try (
-			let HEntry(c,v) = Hashtbl.find htbl l in Hashtbl.remove htbl l; Hashtbl.replace htbl l (HEntry(c + 1,v))
+			let HEntry(c,v) = Hashtbl.find htbl l in
+				Hashtbl.remove htbl l;
+				Hashtbl.replace htbl l (HEntry(c + 1,v))
 		) with Not_found -> (); self#show
 	)
 	
@@ -144,15 +169,19 @@ class heap size = object (self)
 				(Loc(addr),HEntry(count,value)) -> (
 					print_int addr; print_string ":"; print_int count;
 					(match value with
-						  StoreLoc(v) -> print_string ":slc["; print_loc v;
-						| HeapLoc(v) -> print_string ":hlc["; print_loc v;
-						| ValueInt(v) -> print_string ":int["; print_int v;
-						| ValueFloat(v) -> print_string ":flt["; print_float v;
+						  StoreLoc(v) ->	print_string ":slc["; print_loc v;
+						| HeapLoc(v) ->		print_string ":hlc["; print_loc v;
+						| ValueInt(v) ->	print_string ":int["; print_int v;
+						| ValueFloat(v) ->	print_string ":flt["; print_float v;
 					);
 					print_string "]\n"
 				)
-				| (Null,_) -> raise (NULL_POINTER_EXCEPTION "show")
-		) in print_string "Heap:\n"; let length = Hashtbl.length htbl in if length = 0 then print_string "\tEmpty\n" else Hashtbl.iter lookat htbl 
+				| (Null,_) -> raise (NULL_POINTER_EXCEPTION "Heap#show")
+		) in
+			print_string "Heap:\n";
+			let length = Hashtbl.length htbl in
+				if length = 0 then print_string "\tEmpty\n"
+				else Hashtbl.iter lookat htbl 
 	)
 
 end;;
