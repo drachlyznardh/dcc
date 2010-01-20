@@ -148,7 +148,7 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 							  							Ide(name) -> raise (SYNTAX ("Eval_aexp(Ref): Not a Descr_Pntr ("^name^")"))
 							  					)
 						  				)
-						| Mref(next) -> aux next
+(*						| Mref(next) -> aux next *)
 					in aux p
     			   )
     | Malloc(t) -> (

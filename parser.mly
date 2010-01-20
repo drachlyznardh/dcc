@@ -141,7 +141,6 @@ bexp
    
 rexp
 	: ide										  { Sref($1) }
-    | AT rexp									  { Mref($2) }
     
 dexp
 	: ide										  { Sunref($1) }

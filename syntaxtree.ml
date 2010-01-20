@@ -5,7 +5,7 @@ type ide =
 (* Reference *)
 type rexp =
 	  Sref 		of ide		(* Simple Reference => @ide *)
-	| Mref 		of rexp		(* Long Reference => @@@ide *)
+(*	| Mref 		of rexp		(* Long Reference => @@@ide WAT!?!? *)*)
 
 (* Derefence *)
 type dexp =
