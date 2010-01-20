@@ -74,10 +74,12 @@ let string_of_loc (l:loc) = match l with
 	| Null -> "Null"
 
 let string_of_value (v:value) = match v with
-	  ValueInt(i) -> 	"Int"^(string_of_int i)
-	| ValueFloat(f) ->	"Flt"^(string_of_float f)
-	| StoreLoc(sl) -> 	"SLc"^(string_of_loc sl)
-	| HeapLoc(hl) -> 	"HLc"^(string_of_loc hl)
+	  ValueInt(i) -> 	"Int["^(string_of_int i)^"]"
+	| ValueFloat(f) ->	"Flt["^(string_of_float f)^"]"
+	| StoreLoc(sl) -> 	"SLc["^(string_of_loc sl)^"]"
+	| HeapLoc(hl) -> 	"HLc["^(string_of_loc hl)^"]"
+
+let print_value (v:value) = print_string (string_of_value v)
 
 let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ();
 
@@ -92,9 +94,16 @@ class store size = object (self)
 		Loc(newcell)
 	)
 
-	method get (l:loc) = Hashtbl.find stbl l
+	method get (l:loc) = (
+		check_loc l "Store#get";
+		Hashtbl.find stbl l
+	)
 
-	method update (l:loc) (v:value) = Hashtbl.remove stbl l; Hashtbl.replace stbl l v
+	method update (l:loc) (v:value) = (
+		check_loc l "Store#update";
+		Hashtbl.remove stbl l; Hashtbl.replace stbl l v;
+		self#show
+	)
 
 	method updatevec (l:loc) (s:int) (v:value) = (
 		match s with
@@ -108,18 +117,11 @@ class store size = object (self)
 		let lookat (l:loc) (v:value) = (
 			print_string "\t";
 			match l with
-				Loc(addr) ->	(print_int addr;
-								(match v with
-									  StoreLoc(v) ->	print_string ":slc["; print_loc v;
-									| HeapLoc(v) ->		print_string ":hlc["; print_loc v;
-									| ValueInt(v) ->	print_string ":int["; print_int v;
-									| ValueFloat(v) ->	print_string ":flt["; print_float v;
-								);
-								print_string "]\n"
-								)
-				| Null -> raise (NULL_POINTER_EXCEPTION "Store#show")
+				  Loc(lv) ->	print_string ((string_of_int lv)^":");
+								print_value v
+				| Null ->		raise (NULL_POINTER_EXCEPTION "Store#show")
 		) in
-			print_string "Store:\n";
+			print_string "\nStore:\n";
 			let length = Hashtbl.length stbl in
 				if length = 0 then print_string "\tEmpty\n"
 				else Hashtbl.iter lookat stbl 
@@ -183,19 +185,10 @@ class heap size = object (self)
 		let lookat (l:loc) (h:hentry) = (
 			print_string "\t";
 			match (l,h) with
-				(Loc(addr),HEntry(count,value)) -> (
-					print_int addr; print_string ":"; print_int count;
-					(match value with
-						  StoreLoc(v) ->	print_string ":slc["; print_loc v;
-						| HeapLoc(v) ->		print_string ":hlc["; print_loc v;
-						| ValueInt(v) ->	print_string ":int["; print_int v;
-						| ValueFloat(v) ->	print_string ":flt["; print_float v;
-					);
-					print_string "]\n"
-				)
-				| (Null,_) -> raise (NULL_POINTER_EXCEPTION "Heap#show")
+				  (Loc(lv),HEntry(c,v)) ->	print_string ((string_of_int lv)^":"^(string_of_int c)^":"^(string_of_value v))
+				| (Null,_) ->				raise (NULL_POINTER_EXCEPTION "Heap#show")
 		) in
-			print_string "Heap:\n";
+			print_string "\nHeap:\n";
 			let length = Hashtbl.length htbl in
 				if length = 0 then print_string "\tEmpty\n"
 				else Hashtbl.iter lookat htbl 

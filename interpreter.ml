@@ -142,9 +142,9 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 					(match t with
 						  Basic(b) ->	let l = h#newmem 1 in
 					  						(match b with
-					  							  Int -> h#set_value l (ValueInt(0)); print_string "Malloc(Int"
-					  							| Float -> h#set_value l (ValueFloat(0.0)); print_string "Malloc(Flt"
-					  						); print_string (")"^(string_of_value (HeapLoc(l)))^"\n"); h#show; HeapLoc(l)
+					  							  Int -> h#set_value l (ValueInt(0));
+					  							| Float -> h#set_value l (ValueFloat(0.0));
+					  						); HeapLoc(l)
 						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 						| Pointer(p) -> let l = h#newmem 1 in
 											(match p with 
@@ -337,8 +337,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
 												let res = do_deref_value depth idaddr s h
 													in match res with 
-														  StoreLoc(l) -> print_string "Lunref(SLc)\n"; s#update l ret; s
-														| HeapLoc(l) -> print_string "Lunref(HLc)\n";move_pointer (h#get_value l) ret s h
+														  StoreLoc(l) -> s#update l ret; s
+														| HeapLoc(l) -> move_pointer (h#get_value l) ret s h
 														| ValueInt(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
 														| ValueFloat(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
                         					)
