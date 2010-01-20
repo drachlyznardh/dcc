@@ -122,8 +122,7 @@ let set_value (l:value) (v:value) (s:store) (h:heap) = match l with
 let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
       N(n)      ->  ValueInt(n)
     | R(n)      ->  ValueFloat(n)
-    | Ident(i)  ->  (
-                     match r(i) with
+    | Ident(i)  ->  (match r(i) with
                           Var(l) -> s#get l
                         | Val(v) -> v
                         | Descr_Pntr(n,l) -> s#get l

@@ -11,9 +11,6 @@ type value =
     | StoreLoc of loc				(* Location in the Store space *)
     | HeapLoc of loc				(* Location in the Heap space *)
 
-type _store =
-	loc -> value					(* Store: location to simple values *)
-
 type env_entry =
 	  Var of loc					(* Location, variable *)
 	| Val of value					(* Value, constant *)
@@ -119,9 +116,8 @@ class store size = object (self)
 		let lookat (l:loc) (v:value) = (
 			print_string "\t";
 			match l with
-				  Loc(lv) ->	print_string ((string_of_int lv)^":");
-								print_value v
-				| Null ->		raise (NULL_POINTER_EXCEPTION "Store#show")
+				  Loc(lv) ->	print_string ((string_of_int lv)^":"^(string_of_value v))
+				| Null ->		print_string ("Null:"^(string_of_value v))
 		) in
 			print_string "\nStore:\n";
 			let length = Hashtbl.length stbl in
