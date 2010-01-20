@@ -207,13 +207,13 @@ let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
 (* evaluation of declarations *)
 let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
       []                        ->  (r,s,h)
-    | Dec(x,Basic(tipo))::decls ->  let newaddr = s#newmem
+    | Dec(x,Basic(tipo))::decls ->  let nl = s#newmem
                                     in (
                                          match tipo with
-                                              Int   ->	s#update (Loc(newaddr)) (ValueInt(0));
-                                              			dec_eval decls (updateenv(r,x,Var(Loc(newaddr)))) s h
-                                            | Float ->	s#update (Loc(newaddr)) (ValueFloat(0.0));
-                                            			dec_eval decls (updateenv(r,x,Var(Loc(newaddr)))) s h
+                                              Int   ->	s#update nl (ValueInt(0));
+                                              			dec_eval decls (updateenv(r,x,Var(nl))) s h
+                                            | Float ->	s#update nl (ValueFloat(0.0));
+                                            			dec_eval decls (updateenv(r,x,Var(nl))) s h
                                         )
     | Dec(x,Const(tipo,valore_exp))::decls  
                                 ->  let valore = eval_aexp valore_exp r s h in
@@ -223,26 +223,22 @@ let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
                                 			| (_,_) -> raise DIFFERENT_TYPE_ASSIGNATION
                                 		)
     | Dec(x,Pointer(pcontent))::decls ->
-    		let newaddr = s#newmem
+    		let nl = s#newmem
     			and depth = pntr_depth pcontent
     		in (
     			(* print_string ("New Descr_Pntr(" ^ (string_of_int depth) ^ ", " ^ (string_of_int newaddr) ^ ")"); *)
-    			s#update (Loc(newaddr)) (StoreLoc(Null));
-    			dec_eval decls (updateenv(r,x,Descr_Pntr(depth,Loc(newaddr)))) s h
+    			s#update nl (StoreLoc(Null));
+    			dec_eval decls (updateenv(r,x,Descr_Pntr(depth,nl))) s h
     		)
     | Dec(x,Vector(tipo,lb,ub))::decls
-                                ->  let newaddr = s#newmem
-                                    and dim = ub - lb + 1
-                                    in
-                                    let vo = Loc(newaddr - lb)
-                                    in
-                                    (
-                                      match tipo with
-                                          Int ->	s#updatevec (Loc(newaddr)) dim (ValueInt(0));
-                                          			dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) s h
-                                        | Float ->	s#updatevec (Loc(newaddr)) dim (ValueFloat(0.0));
-                                        			dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) s h
-                                    )
+                                ->  let nl = s#newmem and dim = ub - lb + 1 in
+	                                    let vo = moveloc nl lb in
+				                            (match tipo with
+				                                  Int ->	s#updatevec (nl) dim (ValueInt(0));
+				                                  			dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) s h
+				                                | Float ->	s#updatevec (nl) dim (ValueFloat(0.0));
+				                                			dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) s h
+				                            )
 
 (* declaration of subprograms *)
 let rec sub_prog_decl_eval (d: sub_prog list) ((r:env),(s:store),(h:heap)) = match d with

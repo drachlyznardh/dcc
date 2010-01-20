@@ -60,6 +60,11 @@ let nextloc (l:loc) : loc =
 		  Loc(value) -> Loc(value + 1)
 		| Null -> raise (NULL_POINTER_EXCEPTION "nextloc")
 
+let moveloc (l:loc) (v:int) =
+	match l with
+		  Loc(lv) -> Loc(lv + v)
+		| Null -> raise (NULL_POINTER_EXCEPTION "moveloc")
+
 let print_loc (l:loc) = match l with
 	  Loc(v) -> print_int v
 	| Null -> print_string "Null"
@@ -79,13 +84,25 @@ let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCE
 (* Store class *)
 class store size = object (self)
 
-	val mutable newcell = 0
+	val mutable newcell = -1
 	val mutable stbl = (Hashtbl.create size : (loc, value) Hashtbl.t)
 
-	method newmem = let tmp = newcell in newcell = newcell +1; tmp
+	method newmem = (
+		newcell <- newcell + 1;
+		Loc(newcell)
+	)
+
 	method get (l:loc) = Hashtbl.find stbl l
+
 	method update (l:loc) (v:value) = Hashtbl.remove stbl l; Hashtbl.replace stbl l v
-	method updatevec (l:loc) (s:int) (v:value) = Hashtbl.remove stbl l; Hashtbl.replace stbl l v
+
+	method updatevec (l:loc) (s:int) (v:value) = (
+		match s with
+			  1 ->	self#update l v
+			| n ->	self#update l v;
+					let nl = self#newmem in
+						self#updatevec nl (s - 1) v  
+	)
 
 	method show = (
 		let lookat (l:loc) (v:value) = (
@@ -113,7 +130,7 @@ end;;
 (* Heap class *)
 class heap size = object (self)
 	
-	val mutable newcell = 0
+	val mutable newcell = -1
 	val mutable htbl = (Hashtbl.create size : (loc, hentry) Hashtbl.t)
 	
 	method get (l:loc) = Hashtbl.find htbl l
@@ -158,8 +175,8 @@ class heap size = object (self)
 	)
 	
 	method newmem size = (
-		let res = Loc(newcell) in
-			newcell <- newcell + size; res
+		newcell <- newcell + size;
+		Loc(newcell)
 	)
 	
 	method show = (
