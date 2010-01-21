@@ -10,7 +10,7 @@ type value =
     | ValueFloat of float			(* Type float with value *)
     | StoreLoc of loc				(* Location in the Store space *)
     | HeapLoc of loc				(* Location in the Heap space *)
-
+(*
 type env_entry =
 	  Var of loc					(* Location, variable *)
 	| Val of value					(* Value, constant *)
@@ -22,15 +22,15 @@ type env_entry =
 
 type env =
 	ide -> env_entry				(* Environment entries *)
-
+*)
 type rentry =
-	  RVar of bType * loc			(* Variabile with type and residence *)
-	| RVal of value					(* Constant value *)
-	| RDescr_Pntr of
+	  Var of bType * loc			(* Variabile with type and residence *)
+	| Val of value					(* Constant value *)
+	| Descr_Pntr of
 		bType * int * loc			(* Pointer with final type, depth and residence *)
-	| RDescr_Vctr of
+	| Descr_Vctr of
 		bType * int * int * loc		(* Vector with final type, bounds and residence *)
-	| RDescr_Prcd of
+	| Descr_Prcd of
 		param list * dec list * cmd	(* Procedure with parameters, declarations and body *)
 
 type hentry =
@@ -93,7 +93,7 @@ let print_value (v:value) = print_string (string_of_value v)
 let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ();
 
 (* Heap class *)
-class renv size = object (self)
+class env size = object (self)
 
 	val mutable rtbl = [("base", (Hashtbl.create size : (ide, rentry) Hashtbl.t))]
 	
@@ -108,7 +108,7 @@ class renv size = object (self)
 			| (n,head)::tail ->	Hashtbl.clear head; rtbl <- tail
 	)
 	
-	method declare (i:ide) (r:rentry) = (
+	method set (i:ide) (r:rentry) = (
 		match rtbl with
 			  [] -> raise NO_IDE
 			| (n,head)::tail -> Hashtbl.replace head i r
@@ -131,11 +131,11 @@ class renv size = object (self)
 						Ide(name) -> print_string ("["^name^"]:");
 					);
 					(match r with
-						  RVar(_) ->				print_string ("Var")
-						| RVal(_) ->				print_string ("Val")
-						| RDescr_Pntr(_,_,_) ->		print_string ("Pntr")
-						| RDescr_Vctr(_,_,_,_) ->	print_string ("Vctr")
-						| RDescr_Prcd(_,_,_) ->		print_string ("Prcd")
+						  Var(_) ->				print_string ("Var")
+						| Val(_) ->				print_string ("Val")
+						| Descr_Pntr(_,_,_) ->		print_string ("Pntr")
+						| Descr_Vctr(_,_,_,_) ->	print_string ("Vctr")
+						| Descr_Prcd(_,_,_) ->		print_string ("Prcd")
 					)
 				) and length = Hashtbl.length tbl in
 					print_string ("\n\t"^n);

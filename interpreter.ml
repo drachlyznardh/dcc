@@ -10,11 +10,12 @@ open Mem;;
 (* THE INTERPRETER *)
 
 (* utility functions *)
-let initenv (x:ide):env_entry = raise NO_IDE
+(*let initenv (x:ide):env_entry = raise NO_IDE*)
 let initmem (x:loc):value = raise NO_MEM
 
+let initenv =	new env 16		(* Initially empty REnv *)
 let initstore = new store 16	(* Initially empty Store *)
-let initheap = new heap 16		(* Initially empty Heap *)
+let initheap =	new heap 16		(* Initially empty Heap *)
 
 (*
 let updatemem ((s:store), (l:loc), (v:value)) :store = 
@@ -22,10 +23,10 @@ let updatemem ((s:store), (l:loc), (v:value)) :store =
 	function
     x -> if (x = l) then v else s(x)
 *)
-
+(*
 let updateenv ((e:env),id, (v:env_entry)) :env = function
     y -> if (y = id) then v else e(y)
-
+*)
 (*
 let newmem (s: store) : int =   
     let rec aux n =
@@ -63,10 +64,10 @@ let pntr_finaltype (p:pType) : bType =
 let pntr_get_data (p:dexp) (r:env) : (value * int) =
 	let rec aux (p:dexp) (r:env) = match p with
 		  Sunref(id) -> (
-		  				match r(id) with
-		  					  Var(l) -> (StoreLoc(l), 1)
+		  				match r#get id with
+		  					  Var(_,l) -> (StoreLoc(l), 1)
 		  					| Val(v) -> (v,1)
-		  					| Descr_Pntr(n,l) -> (StoreLoc(l),1)
+		  					| Descr_Pntr(_,_,l) -> (StoreLoc(l),1)
 		  					| _ -> raise NOT_A_POINTER
 		  				)
 		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
@@ -83,8 +84,8 @@ let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value =
 
 let get_addr (d:lexp) (r:env) (s:store) (h:heap) : loc = match d with
 	  LVar(id) -> (
-	  				match r(id) with
-	  					  Descr_Pntr(_,l) ->	(match (s#get l) with
+	  				match r#get id with
+	  					  Descr_Pntr(_,_,l) ->	(match (s#get l) with
 	  					  							  HeapLoc(v) -> print_string ("HeapLoc["^(string_of_loc v)^"]"); v
 	  					  							| StoreLoc(v) -> print_string ("StoreLoc["^(string_of_loc v)^"]"); v
 	  					  							| _ -> raise (DEREF_ON_NOT_A_POINTER ("Get_addr["^(string_of_loc l)^"]"))
@@ -97,12 +98,12 @@ let get_addr (d:lexp) (r:env) (s:store) (h:heap) : loc = match d with
 							in get_loc res
 
 (* Where is this identifier's value saved? *)
-let get_residence (i:ide) (r:env) :value = match r i with
-	  Var(l) -> StoreLoc(l)
-	| Val(_) -> raise (RESIDENT_EVIL "It's a Constant!")
-	| Descr_Pntr(_,l) -> StoreLoc(l)
-	| Descr_Vector(l,_,_) -> StoreLoc(l)
-	| Descr_Procedure(_,_,_) -> raise (RESIDENT_EVIL "It's a Procedure!")
+let get_residence (i:ide) (r:env) :value = match r#get i with
+	  Var(_,l) ->				StoreLoc(l)
+	| Val(_) ->					raise (RESIDENT_EVIL "It's a Constant!")
+	| Descr_Pntr(_,_,l) ->		StoreLoc(l)
+	| Descr_Vctr(_,_,_,l) ->	StoreLoc(l)
+	| Descr_Prcd(_,_,_) ->		raise (RESIDENT_EVIL "It's a Procedure!")
 
 (* I need THAT value, I don't mind where is it saved. *)
 let get_value (l:value) (s:store) (h:heap) :value = match l with
@@ -122,10 +123,10 @@ let set_value (l:value) (v:value) (s:store) (h:heap) = match l with
 let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
       N(n)      ->  ValueInt(n)
     | R(n)      ->  ValueFloat(n)
-    | Ident(i)  ->  (match r(i) with
-                          Var(l) -> s#get l
+    | Ident(i)  ->  (match r#get i with
+                          Var(_,l) -> s#get l
                         | Val(v) -> v
-                        | Descr_Pntr(n,l) -> s#get l
+                        | Descr_Pntr(_,_,l) -> s#get l
                         | _ -> match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
     | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in do_deref depth idaddr s h
@@ -144,8 +145,8 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
 					)
     | Vec(v,i)  ->  (
-                     match r(v) with
-                          Descr_Vector(Loc(vo),lb,ub) ->
+                     match r#get v with
+                          Descr_Vctr(_,lb,ub,Loc(vo)) ->
 							(
 								let res = (eval_aexp i r s h) in match res with 
 									  ValueInt(pos) ->	if (pos >= lb && pos <= ub) then
@@ -200,41 +201,48 @@ let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
     | Dec(x,Basic(tipo))::decls ->  let nl = s#newmem
                                     in (
                                          match tipo with
-                                              Int   ->	s#set nl (ValueInt(0));
-                                              			dec_eval decls (updateenv(r,x,Var(nl))) s h
-                                            | Float ->	s#set nl (ValueFloat(0.0));
-                                            			dec_eval decls (updateenv(r,x,Var(nl))) s h
+                                              Int   ->	r#set x (Var(Int,nl));
+                                              			s#set nl (ValueInt(0));
+                                              			dec_eval decls r s h
+                                            | Float ->	r#set x (Var(Float,nl));
+														s#set nl (ValueFloat(0.0));
+                                            			dec_eval decls r s h
                                         )
-    | Dec(x,Const(tipo,valore_exp))::decls  
-                                ->  let valore = eval_aexp valore_exp r s h in
-                                		(match (tipo,valore) with
-                                			  (Int,ValueInt(v)) -> dec_eval decls (updateenv(r,x,Val(ValueInt(v)))) s h
-                                			| (Float,ValueFloat(v)) -> dec_eval decls (updateenv(r,x,Val(ValueFloat(v)))) s h
-                                			| (_,_) -> raise DIFFERENT_TYPE_ASSIGNATION
+    | Dec(x,Const(t,e))::decls ->	let nv = eval_aexp e r s h in
+                                		(match (t,nv) with
+                                			  (Int,ValueInt(iv)) ->		r#set x (Val(ValueInt(iv)));
+                                			  							dec_eval decls r s h
+                                			| (Float,ValueFloat(fv)) ->	r#set x (Val(ValueFloat(fv)));
+                                										dec_eval decls r s h
+                                			| (_,_) ->					raise DIFFERENT_TYPE_ASSIGNATION
                                 		)
     | Dec(x,Pointer(pcontent))::decls ->
     		let nl = s#newmem
     			and depth = pntr_depth pcontent
+    			and ptype = pntr_finaltype pcontent
     		in (
     			(* print_string ("New Descr_Pntr(" ^ (string_of_int depth) ^ ", " ^ (string_of_int newaddr) ^ ")"); *)
+    			r#set x (Descr_Pntr(ptype,depth,nl));
     			s#set nl (StoreLoc(Null));
-    			dec_eval decls (updateenv(r,x,Descr_Pntr(depth,nl))) s h
+    			dec_eval decls r s h
     		)
-    | Dec(x,Vector(tipo,lb,ub))::decls
+    | Dec(x,Vector(t,lb,ub))::decls
                                 ->  let nl = s#newmem and dim = ub - lb + 1 in
 	                                    let vo = moveloc nl lb in
-				                            (match tipo with
-				                                  Int ->	s#setvec (nl) dim (ValueInt(0));
-				                                  			dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) s h
-				                                | Float ->	s#setvec (nl) dim (ValueFloat(0.0));
-				                                			dec_eval decls (updateenv(r,x,Descr_Vector(vo,lb,ub))) s h
+				                            (match t with
+				                                  Int ->	r#set x (Descr_Vctr(Int,lb,ub,vo));
+				                                  			s#setvec (nl) dim (ValueInt(0));
+				                                  			dec_eval decls r s h
+				                                | Float ->	r#set x (Descr_Vctr(Float,lb,ub,vo));
+				                                			s#setvec (nl) dim (ValueFloat(0.0));
+				                                			dec_eval decls r s h
 				                            )
 
 (* declaration of subprograms *)
 let rec sub_prog_decl_eval (d: sub_prog list) ((r:env),(s:store),(h:heap)) = match d with
       [] -> (r,s,h)
-    | Proc(id,params,locals,cmds)::decls ->
-        sub_prog_decl_eval decls ((updateenv(r,id,(Descr_Procedure(params,locals,cmds)))),s,h)
+    | Proc(x,params,locals,cmds)::decls ->	r#set x (Descr_Prcd(params,locals,cmds));
+    										sub_prog_decl_eval decls (r,s,h)
 
 
 (* evaluation of actual parameter list *)
@@ -280,9 +288,9 @@ let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s:sto
                 assign_values forms acts (dec_eval [Dec(id,Basic(tipo))] r s h)
             in
                 (
-                 match r'(id) with
-                      Var(l) -> s#set l v; (r',s,h)
-                    | _ -> raise (SYNTAX "Assign_values: Not a Variable")
+                 match r'#get id with
+                      Var(_,l) ->	s#set l v; (r',s,h)
+                    | _ ->			raise (SYNTAX "Assign_values: Not a Variable")
                 )
         | _ -> raise (SYNTAX "Assign_values: Not a list")
 
@@ -299,17 +307,17 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         (
                          match i with
                               LVar(id)  -> (
-                                            match r(id) with
-                                              Var(l)    -> s#set l ret; s
-                                            | Descr_Pntr(_,l) ->	move_pointer (s#get l) ret s h
+                                            match r#get id with
+                                              Var(_,l)    ->		s#set l ret; s
+                                            | Descr_Pntr(_,_,l) ->	move_pointer (s#get l) ret s h
                                             | _         -> (
 		                                        			match id with 
 		                                        				Ide(name) -> raise (SYNTAX ("Exec(Ass,LVar): Not a Variable("^name^")"))
                                             				)
                                            )
                             | LVec(v,idx) -> (
-                                              match r(v) with
-                                                  Descr_Vector(Loc(vo),lb,ub) ->
+                                              match r#get v with
+                                                  Descr_Vctr(_,lb,ub,Loc(vo)) ->
 														(
 														let res = (eval_aexp idx r s h) in
 		                                                	(match res with 
@@ -348,8 +356,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                             | _ -> raise (SYNTAX "Use an integer for your counter, do NOT use other stuff")
                         in 
                         (
-                         match r(i) with
-                              Var(l) -> 
+                         match r#get i with
+                              Var(_,l) -> 
                                 (
                                 s#set l valmin;
                                 let s0 = s
@@ -384,10 +392,10 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                     ->  let input_values = (eval_actual_params input_exprs r s h)
                         in
                         (
-                         match (r(id)) with
-                              Descr_Procedure(params,locals,cmds) ->
+                         match (r#get id) with
+                              Descr_Prcd(params,locals,cmds) ->
                                 if ((type_checking input_values params)) then
-                                    exec_proc (r(id)) input_values r s h
+                                    exec_proc (r#get id) input_values r s h
                                 else
                                     raise PARAMETERS_DO_NOT_MATCH
                             | _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
@@ -400,7 +408,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 
 
 (* execution of subprograms *)
-and exec_proc (ee:env_entry) (input_values:value list) (r: env) (s: store) (h:heap) : store =
+and exec_proc (re:rentry) (input_values:value list) (r: env) (s: store) (h:heap) : store =
     let do_exec inVars locVars cmds (values:value list) (r: env) (s: store) (h:heap) : store =
         let (r',s',h') = assign_values inVars values (r,s,h)
         in
@@ -408,10 +416,9 @@ and exec_proc (ee:env_entry) (input_values:value list) (r: env) (s: store) (h:he
             in
                 exec cmds r'' s'' h''
     in
-        match ee with
-              Descr_Procedure(params,locals,cmds) ->
-                do_exec params locals cmds input_values r s h
-            | _ -> raise (SYNTAX "Exec_proc: Not a Descr_Procedure")
+        match re with
+              Descr_Prcd(params,locals,cmds) ->	do_exec params locals cmds input_values r s h
+            | _ ->								raise (SYNTAX "Exec_proc: Not a Descr_Procedure")
 
 
 (* evaluation of programs *)
