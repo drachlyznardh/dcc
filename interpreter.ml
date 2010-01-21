@@ -297,9 +297,9 @@ let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s:sto
         | _ -> raise (SYNTAX "Assign_values: Not a list")
 
 
-let move_pointer (l:value) (v:value) (s:store) (h:heap) : store = match l with
-	  HeapLoc(hl) ->	let nl = (get_loc v) in h#sage hl; h#show; h#bump nl; h#show; s#set hl v; s
-	| StoreLoc(sl) ->	let nl = (get_loc v) in h#bump nl; h#show; s#set sl v; s
+let move_pointer (l:value) (v:value) (s:store) (h:heap) = match l with
+	  HeapLoc(hl) ->	let nl = (get_loc v) in h#sage hl; h#show; h#bump nl; h#show; s#set hl v
+	| StoreLoc(sl) ->	let nl = (get_loc v) in h#bump nl; h#show; s#set sl v
 	| _ ->				raise NOT_A_POINTER
 
 (* execution of commands *)
@@ -310,7 +310,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                          match i with
                               LVar(id)  -> (
                                             match r#get id with
-                                              Var(_,l)    ->		s#set l ret; s
+                                              Var(_,l)    ->		s#set l ret
                                             | Descr_Pntr(_,_,l) ->	move_pointer (s#get l) ret s h
                                             | _         -> (
 		                                        			match id with 
@@ -325,7 +325,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 		                                                	(match res with 
 		                                                		  ValueInt(pos) ->
 						                                                if (pos >= lb && pos <= ub)
-						                                                	then (s#set (Loc(vo+pos)) ret; s)
+						                                                	then s#set (Loc(vo+pos)) ret
 								                                        else 
 								                                            raise INDEX_OUT_OF_BOUNDS
 		                                                       	| _ -> raise INDEX_OUT_OF_BOUNDS
@@ -336,59 +336,45 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
 												let res = do_deref depth idaddr s h
 													in match res with 
-														  StoreLoc(l) -> s#set l ret; s
-														| HeapLoc(l) -> move_pointer (h#get l) ret s h
-														| ValueInt(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
-														| ValueFloat(v) -> raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
+														  StoreLoc(l) ->	s#set l ret
+														| HeapLoc(l) ->		move_pointer (h#get l) ret s h
+														| ValueInt(v) ->	raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
+														| ValueFloat(v) ->	raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
                         					)
                         )
-    | Blk([])       ->  s
-    | Blk(x::y)     ->  exec (Blk(y)) r (exec x r s h) h
+    | Blk([])       ->  ();
+    | Blk(x::y)     ->  exec x r s h;
+    					exec (Blk(y)) r s h
     | Ite(b,c1,c2)  ->  if (eval_bexp b r s h) then (exec c1 r s h)
                         else (exec c2 r s h)
-    | While(b,c)    ->  if (not(eval_bexp b r s h)) then s
-                        else
-                            let s'' = exec c r s h
-                            in (exec (While(b,c)) r s'' h)
+    | While(b,c)    ->  if (eval_bexp b r s h) then exec (While(b,c)) r s h
     | For(i,valmin_exp,valmax_exp,c) 
                     ->  let valmin = eval_aexp valmin_exp r s h
-                        and update_counter l s =
-                            match (s#get l) with
-                              ValueInt(n) -> s#set l (ValueInt(n + 1)); s
-                            | _ -> raise (SYNTAX "Use an integer for your counter, do NOT use other stuff")
-                        in 
-                        (
-                         match r#get i with
-                              Var(_,l) -> 
-                                (
-                                s#set l valmin;
-                                let s0 = s
-                                in
-                                    let rec exec_for s =
-                                        let s' = exec c r s h
-                                        in
-                                            let ret = eval_bexp (LT(Ident(i), valmax_exp)) r s' h
-                                            in
-                                                if (ret) then exec_for (update_counter l s')
-                                                else s'
-                                    in exec_for s0
-                                )
-                            | _ -> raise (SYNTAX "Exec(For): Not a Variable")
-                        )
-    | Repeat(c,b)   ->  let s' = exec c r s h
-                        in
-                            let ret = eval_bexp b r s' h
-                            in
-                                if (ret) then s'
-                                else (exec (Repeat(c,b)) r s' h)
+                        	and update_counter l s = (match (s#get l) with
+								  ValueInt(n) ->	s#set l (ValueInt(n + 1))
+								| _ ->				raise (SYNTAX "Use an integer for your counter, do NOT use other stuff")
+							) in 
+							(match r#get i with
+								  Var(_,l) ->	(
+												s#set l valmin;
+												let rec exec_for s =
+													exec c r s h;
+													let ret = (eval_bexp (LT(Ident(i), valmax_exp)) r s h) in
+														if (ret) then (update_counter l s; exec_for s)
+												in exec_for s
+												)
+								| _ ->			raise (SYNTAX "Exec(For): Not a Variable")
+							)
+    | Repeat(c,b)   ->  exec c r s h;
+						if (not(eval_bexp b r s h)) then exec (Repeat(c,b)) r s h
     | Write(e)      ->  let ret = (eval_aexp e r s h)
                         in
                         (
                          match ret with
-                              ValueInt(op1) ->		print_string ("Int:\t"^(string_of_int op1)^"\n");	s
-                            | ValueFloat(op1) ->	print_string ("Flt:\t"^(string_of_float op1)^"\n"); s
-                            | StoreLoc(op1) ->		print_string ("SLc:\t"^(string_of_loc op1)^"\n");	s
-                            | HeapLoc(op1) ->		print_string ("HLc:\t"^(string_of_loc op1)^"\n");	s
+                              ValueInt(op1) ->		print_string ("Int:\t"^(string_of_int op1)^"\n")
+                            | ValueFloat(op1) ->	print_string ("Flt:\t"^(string_of_float op1)^"\n")
+                            | StoreLoc(op1) ->		print_string ("SLc:\t"^(string_of_loc op1)^"\n")
+                            | HeapLoc(op1) ->		print_string ("HLc:\t"^(string_of_loc op1)^"\n")
                         )
     | PCall(id,input_exprs)
                     ->  let input_values = (eval_actual_params input_exprs r s h)
@@ -404,19 +390,19 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                         )
 	| Free(p) ->		let l = (get_addr p r s h)
 							in (match l with 
-								  Loc(v) ->	print_string("Free("^(string_of_int v)^")\n"); h#sage l; s
+								  Loc(v) ->	print_string("Free("^(string_of_int v)^")\n"); h#sage l
 								| Null ->	raise (NULL_POINTER_EXCEPTION "Free")
 							)
 
 
 (* execution of subprograms *)
-and exec_proc (id:ide) (input_values:value list) (r: env) (s: store) (h:heap) : store =
-	let do_exec inVars locVars cmds (values:value list) (r: env) (s: store) (h:heap) : store =
+and exec_proc (id:ide) (input_values:value list) (r: env) (s: store) (h:heap) =
+	let do_exec inVars locVars cmds (values:value list) (r: env) (s: store) (h:heap) =
 		let (r',s',h') = assign_values inVars values (r,s,h) in
         (
 			r#push (get_name id);
 			let (r'',s'',h'') = dec_eval locVars r' s' h' in r#show; exec cmds r'' s'' h'';
-			r#pop; s
+			r#pop
 		)
     in
         match r#get id with
@@ -429,4 +415,4 @@ let run prog =
     match prog with
         Program(vars,sub_progs,com) ->   let (r,s,h) = sub_prog_decl_eval sub_progs (dec_eval vars initenv initstore initheap)
                                          in (exec com r s h)
-      | NoProg -> initstore
+      | NoProg -> ()
