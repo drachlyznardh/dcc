@@ -111,6 +111,8 @@ let get_value (l:value) (s:store) (h:heap) :value = match l with
 	| HeapLoc(hl) ->	h#get hl
 	| _ -> raise (MY_FAULT "get_value")
 
+let get_name (i:ide) = match i with Ide(name) -> name
+
 (* I need something to get changed: do it and don't bother me *)
 let set_value (l:value) (v:value) (s:store) (h:heap) = match l with
 	  StoreLoc(sl) ->	s#set sl v
@@ -395,28 +397,29 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
                          match (r#get id) with
                               Descr_Prcd(params,locals,cmds) ->
                                 if ((type_checking input_values params)) then
-                                    exec_proc (r#get id) input_values r s h
+                                    exec_proc id input_values r s h
                                 else
                                     raise PARAMETERS_DO_NOT_MATCH
                             | _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
                         )
 	| Free(p) ->		let l = (get_addr p r s h)
 							in (match l with 
-								Loc(v) -> print_string("Free("^(string_of_int v)^")\n"); h#sage l; s
-								| Null -> raise (NULL_POINTER_EXCEPTION "Free")
+								  Loc(v) ->	print_string("Free("^(string_of_int v)^")\n"); h#sage l; s
+								| Null ->	raise (NULL_POINTER_EXCEPTION "Free")
 							)
 
 
 (* execution of subprograms *)
-and exec_proc (re:rentry) (input_values:value list) (r: env) (s: store) (h:heap) : store =
-    let do_exec inVars locVars cmds (values:value list) (r: env) (s: store) (h:heap) : store =
-        let (r',s',h') = assign_values inVars values (r,s,h)
-        in
-            let (r'',s'',h'') = dec_eval locVars r' s' h'
-            in
-                exec cmds r'' s'' h''
+and exec_proc (id:ide) (input_values:value list) (r: env) (s: store) (h:heap) : store =
+	let do_exec inVars locVars cmds (values:value list) (r: env) (s: store) (h:heap) : store =
+		let (r',s',h') = assign_values inVars values (r,s,h) in
+        (
+			r#push (get_name id);
+			let (r'',s'',h'') = dec_eval locVars r' s' h' in r#show; exec cmds r'' s'' h'';
+			r#pop; s
+		)
     in
-        match re with
+        match r#get id with
               Descr_Prcd(params,locals,cmds) ->	do_exec params locals cmds input_values r s h
             | _ ->								raise (SYNTAX "Exec_proc: Not a Descr_Procedure")
 

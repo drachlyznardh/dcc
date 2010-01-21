@@ -111,7 +111,7 @@ class env size = object (self)
 	method set (i:ide) (r:rentry) = (
 		match rtbl with
 			  [] -> raise NO_IDE
-			| (n,head)::tail -> Hashtbl.replace head i r
+			| (n,head)::tail -> Hashtbl.replace head i r; self#show
 	)
 	
 	method get (i:ide) = (
@@ -128,7 +128,7 @@ class env size = object (self)
 			let looktbl (n:string) (tbl:(ide,rentry) Hashtbl.t) = (
 				let lookat (i:ide) (r:rentry) = (
 					(match i with
-						Ide(name) -> print_string ("["^name^"]:");
+						Ide(name) -> print_string ("\n\t\t["^name^"]:");
 					);
 					(match r with
 						  Var(_) ->				print_string ("Var")
@@ -144,7 +144,7 @@ class env size = object (self)
 			) in match t with
 				  [] -> ();
 				| (n,head)::tail -> looktbl n head; showtbl tail
-		) in showtbl rtbl
+		) in print_string ("\nEnv:"); showtbl rtbl
 	)
 
 end;;
