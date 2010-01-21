@@ -276,7 +276,7 @@ let type_checking (input_values:value list) (parameters:param list) =
                 )
             | _ -> raise (SYNTAX "Type_checking: error")
     in
-        if (List.length(input_values)!= List.length(parameters))
+        if (List.length(input_values) != List.length(parameters))
             then false
         else
             (check_types input_values parameters)
@@ -347,7 +347,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
     					exec (Blk(y)) r s h
     | Ite(b,c1,c2)  ->  if (eval_bexp b r s h) then (exec c1 r s h)
                         else (exec c2 r s h)
-    | While(b,c)    ->  if (eval_bexp b r s h) then exec (While(b,c)) r s h
+    | While(b,c)    ->  if (not(eval_bexp b r s h)) then exec (While(b,c)) r s h
     | For(i,valmin_exp,valmax_exp,c) 
                     ->  let valmin = eval_aexp valmin_exp r s h
                         	and update_counter l s = (match (s#get l) with
