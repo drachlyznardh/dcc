@@ -20,6 +20,9 @@ eval:
 run: 
 	./$(APP) < input/memory.cre
 
+runall:
+	for i in input/*; do echo "\nNow executing $$i"; ./$(APP) < $$i; done
+
 test: 
 	./test.sh
 
