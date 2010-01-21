@@ -95,37 +95,37 @@ let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCE
 (* Heap class *)
 class renv size = object (self)
 
-	val mutable rtbl = [(Hashtbl.create size : (ide, rentry) Hashtbl.t)]
+	val mutable rtbl = [("base", (Hashtbl.create size : (ide, rentry) Hashtbl.t))]
 	
-	method push = (
+	method push (name:string) = (
 		let nt = (Hashtbl.create 4 : (ide,rentry) Hashtbl.t) in
-			rtbl <- nt::rtbl
+			rtbl <- (name,nt)::rtbl
 	)
 	
 	method pop = (
 		match rtbl with
-			  [] ->			();
-			| head::tail ->	Hashtbl.clear head; rtbl <- tail
+			  [] ->					();
+			| (n,head)::tail ->	Hashtbl.clear head; rtbl <- tail
 	)
 	
 	method declare (i:ide) (r:rentry) = (
 		match rtbl with
 			  [] -> raise NO_IDE
-			| head::tail -> Hashtbl.replace head i r
+			| (n,head)::tail -> Hashtbl.replace head i r
 	)
 	
 	method get (i:ide) = (
-		let rec subget (t: (ide,rentry) Hashtbl.t list) (i:ide) = (
-			match t with
-				  [] ->			raise Not_found
-				| head::tail ->	(try (Hashtbl.find head i)
-								with Not_found -> subget tail i)
+		let rec subget (tbl:(string * (ide,rentry) Hashtbl.t) list) (i:ide) = (
+			match tbl with
+				  [] ->				raise Not_found
+				| (n,head)::tail ->	(try (Hashtbl.find head i)
+										with Not_found -> subget tail i)
 		) in subget rtbl i
 	)
 	
 	method show = (
-		let rec showtbl (t: (ide,rentry) Hashtbl.t list) = (
-			let looktbl (tbl: (ide,rentry) Hashtbl.t) = (
+		let rec showtbl (t:(string * (ide,rentry) Hashtbl.t) list) = (
+			let looktbl (n:string) (tbl:(ide,rentry) Hashtbl.t) = (
 				let lookat (i:ide) (r:rentry) = (
 					(match i with
 						Ide(name) -> print_string ("["^name^"]:");
@@ -137,10 +137,13 @@ class renv size = object (self)
 						| RDescr_Vctr(_,_,_,_) ->	print_string ("Vctr")
 						| RDescr_Prcd(_,_,_) ->		print_string ("Prcd")
 					)
-				) in Hashtbl.iter lookat tbl
+				) and length = Hashtbl.length tbl in
+					print_string ("\n\t"^n);
+					if length == 0 then print_string "[Empty]"
+					else Hashtbl.iter lookat tbl
 			) in match t with
-				[] -> ();
-				| head::tail -> looktbl head; showtbl tail
+				  [] -> ();
+				| (n,head)::tail -> looktbl n head; showtbl tail
 		) in showtbl rtbl
 	)
 
