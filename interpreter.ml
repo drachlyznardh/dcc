@@ -34,8 +34,7 @@ let pntr_finaltype (p:pType) : bType =
 (* Get final identifier name from a pointer *)
 let pntr_get_data (p:dexp) (r:env) : (value * int) =
 	let rec aux (p:dexp) (r:env) = match p with
-		  Sunref(id) -> (
-		  				match r#get id with
+		  Sunref(id) -> (match r#get id with
 		  					  Var(_,l) -> (StoreLoc(l), 1)
 		  					| Val(v) -> (v,1)
 		  					| Descr_Pntr(_,_,l) -> (StoreLoc(l),1)
@@ -53,21 +52,6 @@ let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value =
 		| ValueInt(v) -> raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
 		| ValueFloat(v) -> raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
-let get_addr (d:lexp) (r:env) (s:store) (h:heap) :loc = match d with
-	  LVar(id) -> (
-	  				match r#get id with
-	  					  Descr_Pntr(_,_,l) ->	(match (s#get l) with
-	  					  							  HeapLoc(v) -> print_string ("HeapLoc["^(string_of_loc v)^"]"); v
-	  					  							| StoreLoc(v) -> print_string ("StoreLoc["^(string_of_loc v)^"]"); v
-	  					  							| _ -> raise (DEREF_ON_NOT_A_POINTER ("Get_addr["^(string_of_loc l)^"]"))
-	  					  						)
-	  					| _ -> raise (SYNTAX "I don't like what you're trying to do...")
-	  			)
-	| LVec(v,off) -> raise (SYNTAX "Oh no you don't want to do that|")
-	| Lunref(p) ->	let (idaddr, depth) = pntr_get_data p r 
-	  					in let res = do_deref depth idaddr s h
-							in get_loc res
-
 (* Where is this identifier's value saved? *)
 let get_residence (i:ide) (r:env) :value = match r#get i with
 	  Var(_,l) ->				StoreLoc(l)
@@ -75,6 +59,10 @@ let get_residence (i:ide) (r:env) :value = match r#get i with
 	| Descr_Pntr(_,_,l) ->		StoreLoc(l)
 	| Descr_Vctr(_,_,_,l) ->	StoreLoc(l)
 	| Descr_Prcd(_,_,_) ->		raise (RESIDENT_EVIL "It's a Procedure!")
+
+let get_residence_vec (i:ide) (off:int) (r:env) :value = match r#get i with
+	  Descr_Vctr(_,lb,ub,Loc(l)) ->	let real = l - lb + off in StoreLoc(Loc(real))
+	| _ ->							raise (MY_FAULT "get_residence_vec")
 
 (* I need THAT value, I don't mind where is it saved. *)
 let get_value (l:value) (s:store) (h:heap) :value = match l with
@@ -309,9 +297,20 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 																	else raise PARAMETERS_DO_NOT_MATCH
 							| _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
 						)
-	| Free(p) ->		let l = (get_addr p r s h) in
-							print_string("Free("^(string_of_loc l)^")\n");
-							h#sage l
+	| Free(p) ->		(
+						let lookforloc (p:lexp) = (
+							match p with
+								  LVar(id) ->		get_value (get_residence id r) s h
+								| LVec(id,aexp) ->	(let off = (eval_aexp aexp r s h) in
+														match off with
+															  ValueInt(v) ->	get_value (get_residence_vec id v r) s h
+															| _ ->				raise INDEX_OUT_OF_BOUNDS
+													)
+								| Lunref(d) ->		raise (NOT_YET_IMPLEMENTED "")
+							) in match lookforloc p with
+								HeapLoc(l) -> h#free l
+								| _ -> raise DIFFERENT_TYPE_OPERATION
+						)
 
 (* execution of subprograms *)
 and exec_proc (id:ide) (input_values:value list) (r:env) (s:store) (h:heap) =

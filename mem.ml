@@ -233,6 +233,13 @@ class heap size = object (self)
 		) with Not_found -> raise DOUBLE_FREE
 	)
 	
+	method free (l:loc) = (
+		check_loc l "free";
+		try (
+			Hashtbl.remove htbl l
+		) with Not_found -> raise DOUBLE_FREE
+	)
+	
 	method newmem = (
 		newcell <- newcell + 1;
 		Loc(newcell)
