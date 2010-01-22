@@ -2,11 +2,6 @@
 type ide =
 	Ide of string
 
-(* Reference *)
-type rexp =
-	  Sref 		of ide		(* Simple Reference => @ide *)
-	| Mref 		of rexp		(* Long Reference => @@@ide *)
-
 (* Derefence *)
 type dexp =
 	  Sunref	of ide		(* Simple Derefencete => ^ide *)
@@ -37,8 +32,8 @@ and aexp  =
 	  N			of int
 	| R			of float
 	| Ident		of ide
-	| Ref		of rexp
-	| Deref		of dexp
+	| Ref		of ide
+	| Unref		of dexp
 	| Malloc	of gType
 	| Vec		of ide * aexp
 	| Sum		of aexp * aexp
@@ -87,4 +82,4 @@ type sub_prog =
 (* programs *)
 type program =
 	  Program	of dec list * sub_prog list * cmd
-	| Null
+	| NoProg
