@@ -35,6 +35,7 @@ exception INDEX_OUT_OF_BOUNDS
 exception DIFFERENT_TYPE_OPERATION
 exception DIFFERENT_TYPE_ASSIGNATION
 exception DIFFERENT_TYPE_POINTER
+exception POINTER_ARITHMETIC
 exception PARAMETERS_DO_NOT_MATCH
 
 exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
@@ -173,7 +174,7 @@ class store size = object (self)
 
 	method show = (
 		let lookat (l:loc) (v:value) = (
-			print_string "\t";
+			print_string "\n\t\t";
 			match l with
 				  Loc(lv) ->	print_string ((string_of_int lv)^":"^(string_of_value v))
 				| Null ->		print_string ("Null:"^(string_of_value v))

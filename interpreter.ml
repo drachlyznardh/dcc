@@ -97,66 +97,51 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
       N(n)      ->  ValueInt(n)
     | R(n)      ->  ValueFloat(n)
     | Ident(i)  ->  (match r#get i with
-                          Var(_,l) -> s#get l
-                        | Val(v) -> v
-                        | Descr_Pntr(_,_,l) -> s#get l
-                        | _ -> match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
+                          Var(_,l) ->			s#get l
+                        | Val(v) ->				v
+                        | Descr_Pntr(_,_,l) ->	s#get l
+                        | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
-    | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in do_deref depth idaddr s h
+    | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in
+    					do_deref depth idaddr s h
     | Ref(i)    ->	get_residence i r
     | Malloc(t) ->	(match t with
-						  Basic(b) ->	let l = h#newmem in
-					  						(match b with
-					  							  Int -> h#set l (ValueInt(0));
-					  							| Float -> h#set l (ValueFloat(0.0));
-					  						); HeapLoc(l)
-						| Const(_,_) ->	raise (SYNTAX "You don't want to declare dynamic constant, do you?")
-						| Pointer(p) -> let l = h#newmem in
-											(match p with 
-												_ -> h#set l (HeapLoc(Null))
-											); HeapLoc(l)
+						  Basic(b) ->		let l = h#newmem in
+						  						(match b with
+						  							  Int -> h#set l (ValueInt(0));
+						  							| Float -> h#set l (ValueFloat(0.0));
+						  						); HeapLoc(l)
+						| Const(_,_) ->		raise (SYNTAX "You don't want to declare dynamic constant, do you?")
+						| Pointer(p) ->		let l = h#newmem in
+												(match p with 
+													_ -> h#set l (HeapLoc(Null))
+												); HeapLoc(l)
 						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
 					)
-    | Vec(v,i)  ->  (
-                     match r#get v with
-                          Descr_Vctr(_,lb,ub,Loc(vo)) ->
-							(
-								let res = (eval_aexp i r s h) in match res with 
-									  ValueInt(pos) ->	if (pos >= lb && pos <= ub) then
-		                                					s#get (Loc(vo+pos))
-												        else
-												            raise INDEX_OUT_OF_BOUNDS
-		                        	| _ -> raise INDEX_OUT_OF_BOUNDS
-							)
-                        | _ -> raise (SYNTAX "Eval_aexp(Vec): Not a Descr_Vector")
-                    )
+    | Vec(v,i)  ->  (match r#get v with
+						  Descr_Vctr(_,lb,ub,Loc(vo)) ->	(let res = (eval_aexp i r s h) in
+																match res with 
+																	  ValueInt(pos) ->	if (pos >= lb && pos <= ub) then s#get (Loc(vo+pos))
+																						else raise INDEX_OUT_OF_BOUNDS
+																	| _ -> raise INDEX_OUT_OF_BOUNDS
+															)
+						| _ -> raise (SYNTAX "Eval_aexp(Vec): Not a Descr_Vector")
+					)
     
-    | Sum (a,b) ->  aexp_op_fun a b r s h (+) (+.)
-    
-    | Sub (a,b) ->  aexp_op_fun a b r s h (-) (-.)
-    
-    | Mul (a,b) ->  aexp_op_fun a b r s h ( * ) ( *. )
-    
-    | Div (a,b) -> aexp_op_fun a b r s h (/) (/.)
+    | Sum (a,b) ->	aexp_op_fun a b r s h (+) (+.)
+    | Sub (a,b) ->	aexp_op_fun a b r s h (-) (-.)
+    | Mul (a,b) ->	aexp_op_fun a b r s h ( * ) ( *. )
+    | Div (a,b) ->	aexp_op_fun a b r s h (/) (/.)
 
 and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) (h:heap) fi fr = 
-    let aValue = (eval_aexp a r s h)
-        and bValue = (eval_aexp b r s h)
-    in (
-         match aValue with 
-             ValueInt(op1)      -> (
-                                     match bValue with
-                                          ValueInt(op2) -> ValueInt(fi op1 op2)
-                                        | _ -> raise DIFFERENT_TYPE_OPERATION
-                                    )
-            | ValueFloat(op1)   -> (
-                                     match bValue with
-                                          ValueFloat(op2) -> ValueFloat(fr op1 op2)
-                                        | _ -> raise DIFFERENT_TYPE_OPERATION
-                                    )
-			| StoreLoc(l) ->	raise (SYNTAX ("Location ("^(string_of_loc l)^")"))
-			| HeapLoc(l) ->		raise (SYNTAX ("Location ("^(string_of_loc l)^")"))
-        )
+	let aValue = (eval_aexp a r s h) and bValue = (eval_aexp b r s h) in
+		(match aValue,bValue with 
+			  ValueInt(op1),ValueInt(op2) ->		ValueInt(fi op1 op2)
+			| ValueFloat(op1),ValueFloat(op2) ->	ValueFloat(fr op1 op2)
+			| ValueInt(_),ValueFloat(_) ->			raise DIFFERENT_TYPE_OPERATION
+			| ValueFloat(_),ValueInt(_) ->			raise DIFFERENT_TYPE_OPERATION
+			| _,_ ->								raise POINTER_ARITHMETIC
+		)
 
 let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
       B(b)      ->  b
