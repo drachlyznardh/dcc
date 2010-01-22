@@ -69,6 +69,10 @@ let print_loc (l:loc) = match l with
 let string_of_loc (l:loc) = match l with
 	  Loc(v) -> string_of_int v
 	| Null -> "Null"
+	
+let string_of_type (t:bType) = match t with
+	  Int -> "Int"
+	| Float -> "Float"
 
 let string_of_value (v:value) = match v with
 	  ValueInt(i) -> 	"Int["^(string_of_int i)^"]"
@@ -119,10 +123,10 @@ class env size = object (self)
 						Ide(name) -> print_string ("\n\t\t["^name^"]:");
 					);
 					(match r with
-						  Var(_) ->				print_string ("Var")
-						| Val(_) ->				print_string ("Val")
-						| Descr_Pntr(_,_,_) ->		print_string ("Pntr")
-						| Descr_Vctr(_,_,_,_) ->	print_string ("Vctr")
+						  Var(b,l) ->				print_string ("Var:"^(string_of_type b)^":"^(string_of_loc l))
+						| Val(_) ->					print_string ("Val")
+						| Descr_Pntr(b,d,l) ->		print_string ("Pntr:"^(string_of_type b)^(string_of_int d)^":"^(string_of_loc l))
+						| Descr_Vctr(b,_,_,l) ->	print_string ("Vctr:"^(string_of_type b)^":"^(string_of_loc l))
 						| Descr_Prcd(_,_,_) ->		print_string ("Prcd")
 					)
 				) and length = Hashtbl.length tbl in

@@ -21,7 +21,7 @@ let initall = (initenv,initstore,initheap)
 (* Calculate pointer depth *)
 let pntr_depth (p:pType) : int =
 	let rec aux p = match p with
-		  SPointer(_) -> 0
+		  SPointer(_) -> 1
 		| MPointer(next) -> 1 + (aux next)
 	in aux p
 
