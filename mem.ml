@@ -10,19 +10,7 @@ type value =
     | ValueFloat of float			(* Type float with value *)
     | StoreLoc of loc				(* Location in the Store space *)
     | HeapLoc of loc				(* Location in the Heap space *)
-(*
-type env_entry =
-	  Var of loc					(* Location, variable *)
-	| Val of value					(* Value, constant *)
-	| Descr_Pntr of int * loc		(* Pointer with depth (1+) and location *)
-	| Descr_Vector of
-		loc * int * int				(* Vector with start point, lower and upper bounds *)
-	| Descr_Procedure of
-		param list * dec list * cmd	(* Procedure descriptor *)
 
-type env =
-	ide -> env_entry				(* Environment entries *)
-*)
 type rentry =
 	  Var of bType * loc			(* Variabile with type and residence *)
 	| Val of value					(* Constant value *)
