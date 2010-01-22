@@ -10,13 +10,11 @@ open Mem;;
 
 (* THE INTERPRETER *)
 
-(* utility functions *)
-(*let initenv (x:ide):env_entry = raise NO_IDE*)
-let initmem (x:loc):value = raise NO_MEM
-
 let initenv =	new env 16		(* Initially empty REnv *)
 let initstore = new store 16	(* Initially empty Store *)
 let initheap =	new heap 16		(* Initially empty Heap *)
+
+let initall = (initenv,initstore,initheap)
 
 (** START OF FUFFA **)
 
@@ -171,24 +169,24 @@ let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
 
 
 (* evaluation of declarations *)
-let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
-      []                        ->  (r,s,h)
+let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
+      []                        ->  ()
     | Dec(x,Basic(tipo))::decls ->  let nl = s#newmem
                                     in (
                                          match tipo with
                                               Int   ->	r#set x (Var(Int,nl));
                                               			s#set nl (ValueInt(0));
-                                              			dec_eval decls r s h
+                                              			decl_eval decls r s h
                                             | Float ->	r#set x (Var(Float,nl));
 														s#set nl (ValueFloat(0.0));
-                                            			dec_eval decls r s h
+                                            			decl_eval decls r s h
                                         )
     | Dec(x,Const(t,e))::decls ->	let nv = eval_aexp e r s h in
                                 		(match (t,nv) with
                                 			  (Int,ValueInt(iv)) ->		r#set x (Val(ValueInt(iv)));
-                                			  							dec_eval decls r s h
+                                			  							decl_eval decls r s h
                                 			| (Float,ValueFloat(fv)) ->	r#set x (Val(ValueFloat(fv)));
-                                										dec_eval decls r s h
+                                										decl_eval decls r s h
                                 			| (_,_) ->					raise DIFFERENT_TYPE_ASSIGNATION
                                 		)
     | Dec(x,Pointer(pcontent))::decls ->
@@ -198,7 +196,7 @@ let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
     		in (
     			r#set x (Descr_Pntr(ptype,depth,nl));
     			s#set nl (StoreLoc(Null));
-    			dec_eval decls r s h
+    			decl_eval decls r s h
     		)
     | Dec(x,Vector(t,lb,ub))::decls
                                 ->  let nl = s#newmem and dim = ub - lb + 1 in
@@ -206,17 +204,17 @@ let rec dec_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
 				                            (match t with
 				                                  Int ->	r#set x (Descr_Vctr(Int,lb,ub,vo));
 				                                  			s#setvec (nl) dim (ValueInt(0));
-				                                  			dec_eval decls r s h
+				                                  			decl_eval decls r s h
 				                                | Float ->	r#set x (Descr_Vctr(Float,lb,ub,vo));
 				                                			s#setvec (nl) dim (ValueFloat(0.0));
-				                                			dec_eval decls r s h
+				                                			decl_eval decls r s h
 				                            )
 
 (* declaration of subprograms *)
-let rec sub_prog_decl_eval (d: sub_prog list) ((r:env),(s:store),(h:heap)) = match d with
-      [] -> (r,s,h)
+let rec sub_prog_decl_eval (d: sub_prog list) (r:env) (s:store) (h:heap) = match d with
+      [] -> ()
     | Proc(x,params,locals,cmds)::decls ->	r#set x (Descr_Prcd(params,locals,cmds));
-    										sub_prog_decl_eval decls (r,s,h)
+    										sub_prog_decl_eval decls r s h
 
 
 (* evaluation of actual parameter list *)
@@ -246,19 +244,15 @@ let type_checking (input_values:value list) (parameters:param list) =
         else
             (check_types input_values parameters)
 
-
-let rec assign_values (formals:param list) (actuals:value list) ((r:env), (s:store), (h:heap)) =
-    match (formals,actuals) with
-          [],[] -> (r,s,h)
-        | Par(id,tipo)::forms,v::acts ->
-            let (r',s',h') =
-                assign_values forms acts (dec_eval [Dec(id,Basic(tipo))] r s h)
-            in
-                (
-                 match r'#get id with
-                      Var(_,l) ->	s#set l v; (r',s,h)
-                    | _ ->			raise (SYNTAX "Assign_values: Not a Variable")
-                )
+let rec assign_values (f:param list) (a:value list) (r:env) (s:store) (h:heap) =
+    match (f,a) with
+          [],[] -> ()
+        | Par(id,tipo)::fs,v::acts ->	decl_eval [Dec(id,Basic(tipo))] r s h;
+        								assign_values fs acts r s h;
+										(match r#get id with
+											Var(_,l) ->	s#set l v
+											| _ ->		raise (SYNTAX "Assign_values: Not a Variable")
+										)
         | _ -> raise (SYNTAX "Assign_values: Not a list")
 
 
@@ -354,23 +348,25 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 						)
 
 (* execution of subprograms *)
-and exec_proc (id:ide) (input_values:value list) (r: env) (s: store) (h:heap) =
-	let do_exec inVars locVars cmds (values:value list) (r: env) (s: store) (h:heap) =
-		let (r',s',h') = assign_values inVars values (r,s,h) in
-        (
-			r#push (get_name id);
-			let (r'',s'',h'') = dec_eval locVars r' s' h' in r#show; exec cmds r'' s'' h'';
-			r#pop
-		)
-    in
-        match r#get id with
-              Descr_Prcd(params,locals,cmds) ->	do_exec params locals cmds input_values r s h
-            | _ ->								raise (SYNTAX "Exec_proc: Not a Descr_Procedure")
+and exec_proc (id:ide) (input_values:value list) (r:env) (s:store) (h:heap) =
+	let do_exec inVars locVars cmds (values:value list) (r:env) (s:store) (h:heap) = (
+		r#push (get_name id);				(* Create new nested environment *)
+		assign_values inVars values r s h;	(* Assign current values *)
+		decl_eval locVars r s h;			(* Declare local variables *)
+		r#show;								(* Debug print *)
+		exec cmds r s h;					(* Execute procedure body *)
+		r#pop								(* Trash the nested environment *)
+	) in match r#get id with
+		  Descr_Prcd(params,locals,cmds) ->	do_exec params locals cmds input_values r s h
+		| _ ->								raise (SYNTAX "Exec_proc: Not a Descr_Procedure")
 
 
 (* evaluation of programs *)
 let run prog = 
     match prog with
-        Program(vars,sub_progs,com) ->   let (r,s,h) = sub_prog_decl_eval sub_progs (dec_eval vars initenv initstore initheap)
-                                         in (exec com r s h)
-      | NoProg -> ()
+		  Program(vars,sub_progs,com) ->	let (r,s,h) = initall in	(* Initiallize all utility structures *)
+		  										decl_eval vars r s h;				(* Declare global variables *)
+			  									sub_prog_decl_eval sub_progs r s h;	(* Declare all subprograms *)
+			  									exec com r s h						(* Execute main program *)
+		| NoProg -> ()
+
