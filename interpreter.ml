@@ -39,7 +39,7 @@ let pntr_get_data (p:dexp) (r:env) : (value * int) =
 		  					  Var(_,l) -> (StoreLoc(l), 1)
 		  					| Val(v) -> (v,1)
 		  					| Descr_Pntr(_,_,l) -> (StoreLoc(l),1)
-		  					| _ -> raise NOT_A_POINTER
+		  					| _ -> (match id with Ide(name) -> raise (NOT_A_POINTER ("pntr_get_data["^name^"]")))
 		  				)
 		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
 	in aux p r
@@ -53,7 +53,7 @@ let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value =
 		| ValueInt(v) -> raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
 		| ValueFloat(v) -> raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
-let get_addr (d:lexp) (r:env) (s:store) (h:heap) : loc = match d with
+let get_addr (d:lexp) (r:env) (s:store) (h:heap) :loc = match d with
 	  LVar(id) -> (
 	  				match r#get id with
 	  					  Descr_Pntr(_,_,l) ->	(match (s#get l) with
@@ -244,56 +244,39 @@ let rec assign_values (f:param list) (a:value list) (r:env) (s:store) (h:heap) =
 let move_pointer (l:value) (v:value) (s:store) (h:heap) = match l with
 	  HeapLoc(hl) ->	let nl = (get_loc v) in h#sage hl; h#show; h#bump nl; h#show; s#set hl v
 	| StoreLoc(sl) ->	let nl = (get_loc v) in h#bump nl; h#show; s#set sl v
-	| _ ->				raise NOT_A_POINTER
+	| _ ->				raise (NOT_A_POINTER ("move_pointer("^(string_of_value l)^"->"^(string_of_value v)^")"))
 
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
-    Ass(i,e)        ->  let ret = eval_aexp e r s h
-                        in
-                        (
-                         match i with
-                              LVar(id)  -> (
-                                            match r#get id with
-                                              Var(_,l)    ->		s#set l ret
-                                            | Descr_Pntr(_,_,l) ->	move_pointer (s#get l) ret s h
-                                            | _         -> (
-		                                        			match id with 
-		                                        				Ide(name) -> raise (SYNTAX ("Exec(Ass,LVar): Not a Variable("^name^")"))
-                                            				)
-                                           )
-                            | LVec(v,idx) -> (
-                                              match r#get v with
-                                                  Descr_Vctr(_,lb,ub,Loc(vo)) ->
-														(
-														let res = (eval_aexp idx r s h) in
-		                                                	(match res with 
-		                                                		  ValueInt(pos) ->
-						                                                if (pos >= lb && pos <= ub)
-						                                                	then s#set (Loc(vo+pos)) ret
-								                                        else 
-								                                            raise INDEX_OUT_OF_BOUNDS
-		                                                       	| _ -> raise INDEX_OUT_OF_BOUNDS
-                                                			)
-                                                		)
-                                                | _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
-                                             )
-                        	| Lunref(u) -> 	( let (idaddr, depth) = pntr_get_data u r in
-												let res = do_deref depth idaddr s h
-													in match res with 
-														  StoreLoc(l) ->	s#set l ret
-														| HeapLoc(l) ->		move_pointer (h#get l) ret s h
-														| ValueInt(v) ->	raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_int v)^")"))
-														| ValueFloat(v) ->	raise (DEREF_ON_NOT_A_POINTER ("Lunref("^(string_of_float v)^")"))
-                        					)
-                        )
-    | Blk([])       ->  ();
-    | Blk(x::y)     ->  exec x r s h;
+      Ass(i,e) ->		let ret = eval_aexp e r s h in
+							(match i with
+								  LVar(id)  ->		let l = get_residence id r in set_value l ret s h;
+
+								| LVec(v,idx) ->	(match r#get v with
+														  Descr_Vctr(_,lb,ub,Loc(vo)) ->
+																(let res = (eval_aexp idx r s h) in
+																	(match res with 
+																		ValueInt(pos) -> if (pos >= lb && pos <= ub)
+																			then s#set (Loc(vo+pos)) ret
+																			else raise INDEX_OUT_OF_BOUNDS
+																		| _ -> raise INDEX_OUT_OF_BOUNDS
+																	)
+																)
+														| _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
+													)
+
+								| Lunref(u) ->		(let (idaddr, depth) = pntr_get_data u r in
+														set_value (do_deref depth idaddr s h) ret s h
+													)
+                        	)
+    | Blk([]) ->		()
+    | Blk(x::y) ->		exec x r s h;
     					exec (Blk(y)) r s h
-    | Ite(b,c1,c2)  ->  if (eval_bexp b r s h) then (exec c1 r s h)
+    | Ite(b,c1,c2) ->	if (eval_bexp b r s h) then (exec c1 r s h)
                         else (exec c2 r s h)
-    | While(b,c)    ->  if (not(eval_bexp b r s h)) then exec (While(b,c)) r s h
-    | For(i,valmin_exp,valmax_exp,c) 
-                    ->  let valmin = eval_aexp valmin_exp r s h
+    | While(b,c) ->		if (not(eval_bexp b r s h)) then exec (While(b,c)) r s h
+    | For(i,valmin_exp,valmax_exp,c) ->
+						let valmin = eval_aexp valmin_exp r s h
                         	and update_counter l s = (match (s#get l) with
 								  ValueInt(n) ->	s#set l (ValueInt(n + 1))
 								| _ ->				raise (SYNTAX "Use an integer for your counter, do NOT use other stuff")
@@ -327,10 +310,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 							| _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
 						)
 	| Free(p) ->		let l = (get_addr p r s h) in
-						(match l with 
-							  Loc(v) ->	print_string("Free("^(string_of_int v)^")\n"); h#sage l
-							| Null ->	raise (NULL_POINTER_EXCEPTION "Free")
-						)
+							print_string("Free("^(string_of_loc l)^")\n");
+							h#sage l
 
 (* execution of subprograms *)
 and exec_proc (id:ide) (input_values:value list) (r:env) (s:store) (h:heap) =

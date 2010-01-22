@@ -39,7 +39,7 @@ exception POINTER_ARITHMETIC
 exception PARAMETERS_DO_NOT_MATCH
 
 exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
-exception NOT_A_POINTER				(* While calculating pointer's depth *)
+exception NOT_A_POINTER				of string	(* While calculating pointer's depth *)
 exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
 exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? Or maybe not? *)
 exception NULL_POINTER_EXCEPTION	of string
@@ -124,10 +124,10 @@ class env size = object (self)
 						Ide(name) -> print_string ("\n\t\t["^name^"]:");
 					);
 					(match r with
-						  Var(b,l) ->				print_string ("Var:"^(string_of_type b)^":"^(string_of_loc l))
+						  Var(b,l) ->				print_string ("Var:"^(string_of_type b)^"->"^(string_of_loc l))
 						| Val(_) ->					print_string ("Val")
-						| Descr_Pntr(b,d,l) ->		print_string ("Pntr:"^(string_of_type b)^(string_of_int d)^":"^(string_of_loc l))
-						| Descr_Vctr(b,_,_,l) ->	print_string ("Vctr:"^(string_of_type b)^":"^(string_of_loc l))
+						| Descr_Pntr(b,d,l) ->		print_string ("Pntr:"^(string_of_type b)^(string_of_int d)^"->"^(string_of_loc l))
+						| Descr_Vctr(b,_,_,l) ->	print_string ("Vctr:"^(string_of_type b)^"->"^(string_of_loc l))
 						| Descr_Prcd(_,_,_) ->		print_string ("Prcd")
 					)
 				) and length = Hashtbl.length tbl in
