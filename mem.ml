@@ -193,11 +193,25 @@ class heap size = object (self)
 	val mutable newcell = -1
 	val mutable htbl = (Hashtbl.create size : (loc, hentry) Hashtbl.t)
 	
-	method get (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(_,v) -> v
-	method get_count (l:loc) = let h = Hashtbl.find htbl l in match h with HEntry(c,_) -> c
+	method get (l:loc) = (
+		check_loc l "heap#get";
+		try (
+			let h = Hashtbl.find htbl l in
+				match h with
+					HEntry(_,v) ->	v
+		) with Not_found -> raise (NO_SUCH_HEAP_ENTRY ("heap#get["^(string_of_loc l)^"]"))
+	)
+	
+	method get_count (l:loc) = (
+		try (
+			let h = Hashtbl.find htbl l in
+				match h with
+					HEntry(c,_) -> c
+		) with Not_found -> raise (NO_SUCH_HEAP_ENTRY ("heap#get_count["^(string_of_loc l)^"]"))
+	)
 	
 	method set (l:loc) (v:value) = (
-		check_loc l "set_value";
+		check_loc l "heap#set";
 		try (
 			let h = Hashtbl.find htbl l in (
 				match (v,h) with

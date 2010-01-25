@@ -74,7 +74,7 @@ let get_name (i:ide) = match i with Ide(name) -> name
 
 (* I need something to get changed: do it and don't bother me *)
 let set_value (l:value) (v:value) (s:store) (h:heap) = 
-	print_string ("\n\t"^(string_of_value l)^"->"^(string_of_value v));
+(*	print_string ("\n\t"^(string_of_value l)^"->"^(string_of_value v)); *)
 	match l with
 	  StoreLoc(sl) ->	s#set sl v
 	| HeapLoc(hl) ->	h#set hl v
