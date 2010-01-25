@@ -3,7 +3,7 @@ program
 	var x : int;
 	var p : ^int;
 	var q : ^^int;
-	var r : ^^^int
+	var r : ^^^int;
 
 begin
 
@@ -30,6 +30,6 @@ begin
 
 	write(p);
 	write(q);
-	write(r)
+	write(r);
 
 end

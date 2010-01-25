@@ -2,7 +2,7 @@ program
 
    var x : int;
    var p : ^int;
-   var q : ^int
+   var q : ^int;
 
 begin
 
@@ -23,6 +23,6 @@ begin
    write(^q);
    write(q);
    
-   free(q)
+   free(q);
 
 end

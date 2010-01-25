@@ -1,22 +1,23 @@
 program
-   var x : int
-   
-   procedure proc1(a: int)
-   begin
-      write(a)
-   end;
-   
-   procedure proc()
-      var x : int
-   begin
-      x:=5;
-      call proc1(x);
-      write(x)
-   end
-   
+
+	var x : int;
+
+	procedure proc1(a: int)
+		begin
+		write(a);
+	end
+
+	procedure proc()
+		var x : int;
+		begin
+		x:=5;
+		call proc1(x);
+		write(x);
+	end
+
 begin
-   x := 40;
-   write(x);
-   call proc();
-   call proc1(x)
+	x := 40;
+	write(x);
+	call proc();
+	call proc1(x);
 end

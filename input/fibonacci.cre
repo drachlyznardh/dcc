@@ -1,33 +1,31 @@
 program
 
-   var x : int;
-   var fib0 : int;
-   var fib1 : int;
-   var fib : int;
-   var i : int
+	var x : int;
+	var fib0 : int;
+	var fib1 : int;
+	var fib : int;
+	var i : int;
 
 begin
-   x := 40;
-   fib0 := 0;
-   fib1 := 1;
-   i := 2;
 
-   if (x=0) then begin
-      fib := fib0
-   end
-   else begin
-      if (x=1) then begin
-         fib := fib1
-      end
-      else begin end
-   end;
+	x := 40;
+	fib0 := 0;
+	fib1 := 1;
+	i := 2;
 
-   repeat begin
-      fib := fib0 + fib1;
-      fib0 := fib1;
-      fib1 := fib;
-      i := i+1
-   end until (x<i);
+	if (x=0) then fib := fib0;
+	else begin
+		if (x=1) then fib := fib1;
+		else begin end
+	end
 
-   write(fib)
+	repeat begin
+		fib := fib0 + fib1;
+		fib0 := fib1;
+		fib1 := fib;
+		i := i+1;
+	end until (x<i);
+
+	write(fib);
+
 end

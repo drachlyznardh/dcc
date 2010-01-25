@@ -1,9 +1,11 @@
 program
 
-	var x : int
+	var x : int;
 
 begin
+
 	for x := 1 to 10 do begin
-		write(x)
+		write(x);
 	end
+
 end

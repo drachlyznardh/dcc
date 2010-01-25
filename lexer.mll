@@ -63,7 +63,7 @@ rule lex =
 	| "^"			{ CARET }
 	| "@"			{ AT }
 
-	| ";"			{ SEMICOLON }   
+	| ";"			{ SMCLN }   
 	| ":"			{ COLON }
 	| ","			{ COMMA }
 	| ".."			{ DOTS }

@@ -17,7 +17,7 @@ open Syntaxtree;;
 %token			PLUS MINUS TIMES DIVISION EQUAL LESSEQUAL LESS AND OR NOT 
 %token			ASSIGN CARET AT
 
-%token			SEMICOLON COLON COMMA
+%token			SMCLN COLON COMMA
 
 %token			LP RP
 
@@ -38,14 +38,14 @@ opt_dec_list
     ;
 
 dec_list
-    : dec                                         { [$1] }
-    | dec SEMICOLON dec_list                      { $1::$3 }
-    ;
+	: dec											{ [$1] }
+	| dec dec_list									{ $1::$2 }
+	;
 
 dec
-    : VAR ide COLON gType                         { Dec($2,$4) }
-    | CONST ide COLON bType ASSIGN aexp           { Dec($2, Const($4, $6)) }
-    ;
+	: VAR ide COLON gType SMCLN						{ Dec($2,$4) }
+	| CONST ide COLON bType ASSIGN aexp SMCLN		{ Dec($2, Const($4, $6)) }
+	;
 
 gType
     : bType                                       { Basic($1) }
@@ -69,13 +69,13 @@ opt_proc_list
     ;
 
 proc_list
-    : proc                                        { [$1] }
-    | proc SEMICOLON proc_list                    { $1::$3 }
+    : proc											{ [$1] }
+    | proc proc_list								{ $1::$2 }
     ;
 
 proc
-    : PROCEDURE ide LP opt_param_list RP opt_dec_list cmd { Proc($2,$4,$6,$7) }
-    ;
+	: PROCEDURE ide LP opt_param_list RP opt_dec_list cmd { Proc($2,$4,$6,$7) }
+	;
 
 opt_param_list
     :                                             { [] }
@@ -92,15 +92,15 @@ param
     ;
 
 cmd
-    : lexp ASSIGN aexp                            { Ass($1,$3) }
-    | BEGIN opt_cmd_list END                      { Blk($2) }
-    | IF bexp THEN cmd ELSE cmd                   { Ite($2,$4,$6) }
-    | WHILE bexp DO cmd                           { While($2,$4) }
-    | FOR ide ASSIGN aexp TO aexp DO cmd          { For($2,$4,$6,$8) }
-    | REPEAT cmd UNTIL bexp                       { Repeat($2,$4) }
-    | WRITE aexp                                  { Write($2) }
-    | CALL ide LP opt_aexp_list RP                { PCall($2,$4) }
-    | FREE LP lexp RP							  { Free($3) }
+	: lexp ASSIGN aexp SMCLN						{ Ass($1,$3) }
+	| BEGIN opt_cmd_list END						{ Blk($2) }
+	| IF bexp THEN cmd ELSE cmd						{ Ite($2,$4,$6) }
+	| WHILE bexp DO cmd								{ While($2,$4) }
+	| FOR ide ASSIGN aexp TO aexp DO cmd			{ For($2,$4,$6,$8) }
+	| REPEAT cmd UNTIL bexp SMCLN					{ Repeat($2,$4) }
+	| WRITE aexp SMCLN								{ Write($2) }
+	| CALL ide LP opt_aexp_list RP SMCLN			{ PCall($2,$4) }
+	| FREE LP lexp RP SMCLN							{ Free($3) }
     ;
 
 opt_cmd_list
@@ -109,9 +109,9 @@ opt_cmd_list
     ;
 
 cmd_list
-    : cmd                                         { [$1] }
-    | cmd SEMICOLON cmd_list                      { $1::$3 }
-    ;
+	: cmd											{ [$1] }
+	| cmd cmd_list									{ $1::$2 }
+	;
 
 lexp
     : ide                                         { LVar($1) }

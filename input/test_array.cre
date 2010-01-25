@@ -1,14 +1,15 @@
 program
-    var v : array[4 .. 9] of float;
-    var i : float
+
+	var v : array[4 .. 9] of float;
+	var i : float;
 
 begin
-    for i := 4 to 9 do
-        v[i] := i - 3;
-    i := 9;
-    while (3 < i) do
-        begin
-            write(v[i]);
-            i := i - 1
-        end
+	for i := 4 to 9 do v[i] := i - 3;
+
+	i := 9;
+
+	while (3 < i) do begin
+		write(v[i]);
+		i := i - 1;
+	end
 end
