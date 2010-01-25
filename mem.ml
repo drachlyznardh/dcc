@@ -242,11 +242,17 @@ class heap size = object (self)
 	)
 	
 	method newmem = (
-		let isfree (i:int) = (try (let _ = Hashtbl.find htbl (Loc(i)) in false) with Not_found -> true)
-		in let rec keepsearching (n:int) =
+		let isfree (i:int) = (
+			try (
+				let l = Loc (i) in
+					let h = Hashtbl.find htbl l in match h with
+						HEntry(c,v) ->	if c == 0 then (Hashtbl.remove htbl l; print_string ("\nnewmem:rm"^(string_of_loc l)); true)
+										else false
+			) with Not_found -> true
+		) in let rec keepsearching (n:int) =
 			if isfree n then Loc(n)
 			else keepsearching (n + 1)
-		in let f = keepsearching 0 in print_string ("Found Loc("^string_of_loc f^")"); f
+		in let f = keepsearching 0 in print_string ("\nFound Loc("^string_of_loc f^")"); f
 	)
 
 (*	
@@ -261,7 +267,7 @@ class heap size = object (self)
 	
 	method show = (
 		let lookat (l:loc) (h:hentry) = (
-			print_string "\t\t";
+			print_string "\n\t\t";
 			match (l,h) with
 				  (Loc(lv),HEntry(c,v)) ->	print_string ((string_of_int lv)^":"^(string_of_int c)^":"^(string_of_value v))
 				| (Null,_) ->				raise (NULL_POINTER_EXCEPTION "Heap#show")
