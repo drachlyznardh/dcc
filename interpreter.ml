@@ -92,8 +92,8 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
                         | Descr_Pntr(_,_,l) ->	s#get l
                         | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
-    | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in
-    					do_deref (depth+1) idaddr s h
+    | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in	(* First I get the unreference last location *)
+    					do_deref (depth+1) idaddr s h				(* Then I get that final location stored value *)
     | Ref(i)    ->	get_residence i r
     | Malloc(t) ->	(match t with
 						  Basic(b) ->		let l = h#newmem in
@@ -303,8 +303,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 													)
 								| Lunref(d) ->		raise (NOT_YET_IMPLEMENTED "")
 							) in let d = lookforloc p in match d with
-								HeapLoc(l) -> h#free l
-								| _ -> raise (DIFFERENT_TYPE_OPERATION ("Exec:Free["^(string_of_value d)^"]"))
+								  HeapLoc(l) ->	h#free l
+								| _ ->			raise (DIFFERENT_TYPE_OPERATION ("Exec:Free["^(string_of_value d)^"]"))
 						)
 
 (* execution of subprograms *)

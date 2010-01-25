@@ -28,6 +28,8 @@ begin
 
 	free(p);
 
-	write(p)
+	write(p);
+	write(q);
+	write(r)
 
 end

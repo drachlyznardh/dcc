@@ -208,7 +208,7 @@ class heap size = object (self)
 					| _ ->											raise (DIFFERENT_TYPE_ASSIGNATION "heap#set")
 			)
 		) with Not_found -> Hashtbl.replace htbl l (HEntry(0,v));
-		(*self#show*)
+		self#show
 	)
 	
 	(* Increase counter for an HEntry *)
@@ -242,9 +242,22 @@ class heap size = object (self)
 	)
 	
 	method newmem = (
-		newcell <- newcell + 1;
-		Loc(newcell)
+		let isfree (i:int) = (try (let _ = Hashtbl.find htbl (Loc(i)) in false) with Not_found -> true)
+		in let rec keepsearching (n:int) =
+			if isfree n then Loc(n)
+			else keepsearching (n + 1)
+		in let f = keepsearching 0 in print_string ("Found Loc("^string_of_loc f^")"); f
 	)
+
+(*	
+	method lnewmem = (
+		let isfree (n:int) = (try (let _ = Hashtbl.find htbl (Loc(i)) in false) with Not_found -> true)
+			in let rec arefree (f:int) (left:int) = (if isfree f then arefree (f + 1) (left - 1))
+				in let rec keepsearching (f:int) (left:int) =
+					if arefree f left then (Loc(f))
+					else keepsearching 
+	)
+*)
 	
 	method show = (
 		let lookat (l:loc) (h:hentry) = (
