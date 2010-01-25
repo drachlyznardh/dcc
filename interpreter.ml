@@ -230,12 +230,6 @@ let rec assign_values (f:param list) (a:value list) (r:env) (s:store) (h:heap) =
 										)
         | _ -> raise (SYNTAX "Assign_values: Not a list")
 
-
-let move_pointer (l:value) (v:value) (s:store) (h:heap) = match l with
-	  HeapLoc(hl) ->	let nl = (get_loc v) in h#sage hl; h#show; h#bump nl; h#show; s#set hl v
-	| StoreLoc(sl) ->	let nl = (get_loc v) in h#bump nl; h#show; s#set sl v
-	| _ ->				raise (NOT_A_POINTER ("move_pointer("^(string_of_value l)^"->"^(string_of_value v)^")"))
-
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
       Ass(i,e) ->		let ret = eval_aexp e r s h in
@@ -256,7 +250,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 													)
 
 								| Lunref(u) ->		(let (idaddr, depth) = pntr_get_data u r in
-														set_value (do_deref depth idaddr s h) ret s h
+														set_value (do_deref (depth) idaddr s h) ret s h
 													)
                         	)
     | Blk([]) ->		()
