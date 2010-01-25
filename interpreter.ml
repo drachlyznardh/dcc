@@ -234,8 +234,22 @@ let rec assign_values (f:param list) (a:value list) (r:env) (s:store) (h:heap) =
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
       Ass(i,e) ->		let ret = eval_aexp e r s h in
 							(match i with
-								  LVar(id)  ->		let l = get_residence id r in set_value l ret s h;
-
+								  LVar(id)  ->		let l = get_residence id r in
+								  						let oldv = get_value l s h in
+															(* Now check for SAGE *)
+															(match oldv with
+																  HeapLoc(hl) ->	h#sage hl;
+																  					print_string("SAGE["^(string_of_value oldv)^"]")
+																| _ ->				()
+															);
+									  						(* Now check for BUMP *)
+									  						(match ret with
+									  							  HeapLoc(hl) ->	h#bump hl;
+									  							  					print_string("BUMP["^(string_of_value oldv)^"]")
+									  							| _ ->				()
+															);
+									  						set_value l ret s h;
+									  						h#show;
 								| LVec(v,idx) ->	(match r#get v with
 														  Descr_Vctr(_,lb,ub,Loc(vo)) ->
 																(let res = (eval_aexp idx r s h) in

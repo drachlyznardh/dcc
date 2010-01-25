@@ -228,8 +228,8 @@ class heap size = object (self)
 			let h = Hashtbl.find htbl l in (
 				match h with
 					HEntry(c,v) ->
-						if c == 1 then (Hashtbl.remove htbl l; self#show)
-						else Hashtbl.replace htbl l (HEntry(c - 1,v)); self#show
+						if c == 1 then Hashtbl.remove htbl l
+						else Hashtbl.replace htbl l (HEntry(c - 1,v))
 			)
 		) with Not_found -> raise (DOUBLE_FREE "heap#sage")
 	)
@@ -252,7 +252,7 @@ class heap size = object (self)
 		) in let rec keepsearching (n:int) =
 			if isfree n then Loc(n)
 			else keepsearching (n + 1)
-		in let f = keepsearching 0 in print_string ("\nFound Loc("^string_of_loc f^")"); f
+		in let f = keepsearching 0 in f (* print_string ("\nFound Loc("^string_of_loc f^")"); f *)
 	)
 
 (*	
