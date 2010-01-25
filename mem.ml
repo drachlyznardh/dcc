@@ -272,7 +272,7 @@ class heap size = object (self)
 				  (Loc(lv),HEntry(c,v)) ->	print_string ((string_of_int lv)^":"^(string_of_int c)^":"^(string_of_value v))
 				| (Null,_) ->				raise (NULL_POINTER_EXCEPTION "Heap#show")
 		) in
-			print_string "\nHeap:\n";
+			print_string "\nHeap:";
 			let length = Hashtbl.length htbl in
 				if length = 0 then print_string "\tEmpty\n"
 				else Hashtbl.iter lookat htbl 

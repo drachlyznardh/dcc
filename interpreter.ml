@@ -239,13 +239,13 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 															(* Now check for SAGE *)
 															(match oldv with
 																  HeapLoc(hl) ->	h#sage hl;
-																  					print_string("SAGE["^(string_of_value oldv)^"]")
+																  					(*print_string("\n\t\t\tSAGE["^(string_of_value oldv)^"]")*)
 																| _ ->				()
 															);
 									  						(* Now check for BUMP *)
 									  						(match ret with
 									  							  HeapLoc(hl) ->	h#bump hl;
-									  							  					print_string("BUMP["^(string_of_value oldv)^"]")
+									  							  					(*print_string("\n\t\t\tBUMP["^(string_of_value oldv)^"]")*)
 									  							| _ ->				()
 															);
 									  						set_value l ret s h;
