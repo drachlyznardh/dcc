@@ -2,21 +2,29 @@ program
 
 	var x : int;
 	var p : ^int;
-	var q : ^int;
-	var r : ^int
+	var q : ^^int;
+	var r : ^^^int
 
 begin
 
 	p := malloc (int);
-	q := p;
-	r := q;
+	q := @p;
+	r := @q;
 
 	^p := 102;
 	x := ^p;
 
 	write(p);
 	write(^p);
-	write(x);
+
+	write(q);
+	write(^q);
+	write(^^q);
+
+	write(r);
+	write(^r);
+	write(^^r);
+	write(^^^r);
 
 	free(p);
 

@@ -93,7 +93,6 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
                         | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
     | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in
-    					("\neval_eaxp:unref:pntr_get_data:"^(string_of_value idaddr)^":"^(string_of_int depth));
     					do_deref (depth+1) idaddr s h
     | Ref(i)    ->	get_residence i r
     | Malloc(t) ->	(match t with
