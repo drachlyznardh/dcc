@@ -27,24 +27,24 @@ type hentry =
 (* Heap entries *)
 
 (* exception *)
-exception NO_MEM
-exception NO_IDE
-exception RESIDENT_EVIL				of string (* Constant and Procedure don't have a residence cell in Store *)
-exception SYNTAX					of string
-exception INDEX_OUT_OF_BOUNDS
-exception DIFFERENT_TYPE_OPERATION
-exception DIFFERENT_TYPE_ASSIGNATION
-exception DIFFERENT_TYPE_POINTER
-exception POINTER_ARITHMETIC
-exception PARAMETERS_DO_NOT_MATCH
+exception NO_MEM						of string
+exception NO_IDE						of string
+exception RESIDENT_EVIL					of string (* Constant and Procedure don't have a residence cell in Store *)
+exception SYNTAX						of string
+exception INDEX_OUT_OF_BOUNDS			of string
+exception DIFFERENT_TYPE_OPERATION		of string
+exception DIFFERENT_TYPE_ASSIGNATION	of string
+exception DIFFERENT_TYPE_POINTER		of string
+exception POINTER_ARITHMETIC			of string
+exception PARAMETERS_DO_NOT_MATCH		of string
 
-exception NOT_YET_IMPLEMENTED 		of string	(* LOL, still to be done... *)
-exception NOT_A_POINTER				of string	(* While calculating pointer's depth *)
-exception NO_SUCH_HEAP_ENTRY		(* Heap entry not found *)
-exception DEREF_ON_NOT_A_POINTER	of string	(* Are you dereferencing a pointer? Or maybe not? *)
-exception NULL_POINTER_EXCEPTION	of string
-exception DOUBLE_FREE
-exception MY_FAULT					of string	(* Error due to interpreter malfunction *)
+exception NOT_YET_IMPLEMENTED 			of string	(* LOL, still to be done... *)
+exception NOT_A_POINTER					of string	(* While calculating pointer's depth *)
+exception NO_SUCH_HEAP_ENTRY			of string	(* Heap entry not found *)
+exception DEREF_ON_NOT_A_POINTER		of string	(* Are you dereferencing a pointer? Or maybe not? *)
+exception NULL_POINTER_EXCEPTION		of string
+exception DOUBLE_FREE					of string
+exception MY_FAULT						of string	(* Error due to interpreter malfunction *)
 
 (* Get location value from StoreLoc and HeapLoc *)
 let get_loc (v:value) : loc = match v with
@@ -97,14 +97,14 @@ class env size = object (self)
 	
 	method pop = (
 		match rtbl with
-			  [] ->					();
+			  [] ->				();
 			| (n,head)::tail ->	Hashtbl.clear head; rtbl <- tail
 	)
 	
 	method set (i:ide) (r:rentry) = (
 		match rtbl with
-			  [] -> raise NO_IDE
-			| (n,head)::tail -> Hashtbl.replace head i r; self#show
+			  [] ->				raise (NO_IDE "env#set")
+			| (n,head)::tail ->	Hashtbl.replace head i r; (*self#show*)
 	)
 	
 	method get (i:ide) = (
@@ -161,7 +161,7 @@ class store size = object (self)
 	method set (l:loc) (v:value) = (
 		check_loc l "Store#update";
 		Hashtbl.remove stbl l; Hashtbl.replace stbl l v;
-		self#show
+		(*self#show*)
 	)
 
 	method setvec (l:loc) (s:int) (v:value) = (
@@ -179,7 +179,7 @@ class store size = object (self)
 				  Loc(lv) ->	print_string ((string_of_int lv)^":"^(string_of_value v))
 				| Null ->		print_string ("Null:"^(string_of_value v))
 		) in
-			print_string "\nStore:\n";
+			print_string "\nStore:";
 			let length = Hashtbl.length stbl in
 				if length = 0 then print_string "\tEmpty\n"
 				else Hashtbl.iter lookat stbl 
@@ -205,9 +205,10 @@ class heap size = object (self)
 					  												Hashtbl.replace htbl l (HEntry(c,v))
 					| (ValueFloat(_),HEntry(c,ValueFloat(_))) ->	Hashtbl.remove htbl l;
 																	Hashtbl.replace htbl l (HEntry(c,v))
-					| _ -> raise DIFFERENT_TYPE_ASSIGNATION
+					| _ ->											raise (DIFFERENT_TYPE_ASSIGNATION "heap#set")
 			)
-		) with Not_found -> Hashtbl.replace htbl l (HEntry(0,v))
+		) with Not_found -> Hashtbl.replace htbl l (HEntry(0,v));
+		(*self#show*)
 	)
 	
 	(* Increase counter for an HEntry *)
@@ -230,14 +231,14 @@ class heap size = object (self)
 						if c == 1 then (Hashtbl.remove htbl l; self#show)
 						else Hashtbl.replace htbl l (HEntry(c - 1,v)); self#show
 			)
-		) with Not_found -> raise DOUBLE_FREE
+		) with Not_found -> raise (DOUBLE_FREE "heap#sage")
 	)
 	
 	method free (l:loc) = (
 		check_loc l "free";
 		try (
 			Hashtbl.remove htbl l
-		) with Not_found -> raise DOUBLE_FREE
+		) with Not_found -> raise (DOUBLE_FREE "heap#free")
 	)
 	
 	method newmem = (
@@ -247,7 +248,7 @@ class heap size = object (self)
 	
 	method show = (
 		let lookat (l:loc) (h:hentry) = (
-			print_string "\t";
+			print_string "\t\t";
 			match (l,h) with
 				  (Loc(lv),HEntry(c,v)) ->	print_string ((string_of_int lv)^":"^(string_of_int c)^":"^(string_of_value v))
 				| (Null,_) ->				raise (NULL_POINTER_EXCEPTION "Heap#show")

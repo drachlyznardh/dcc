@@ -44,7 +44,7 @@ let pntr_get_data (p:dexp) (r:env) : (value * int) =
 	in aux p r
 	
 let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value = 
-	if depth = 0 then
+	if depth == 0 then
 		v
 	else match v with
 		  StoreLoc(l) -> do_deref (depth - 1) (s#get l) s h
@@ -73,7 +73,9 @@ let get_value (l:value) (s:store) (h:heap) :value = match l with
 let get_name (i:ide) = match i with Ide(name) -> name
 
 (* I need something to get changed: do it and don't bother me *)
-let set_value (l:value) (v:value) (s:store) (h:heap) = match l with
+let set_value (l:value) (v:value) (s:store) (h:heap) = 
+	print_string ("\n\t"^(string_of_value l)^"->"^(string_of_value v));
+	match l with
 	  StoreLoc(sl) ->	s#set sl v
 	| HeapLoc(hl) ->	h#set hl v
 	| _ -> raise (MY_FAULT "set_value")
@@ -110,8 +112,8 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 						  Descr_Vctr(_,lb,ub,Loc(vo)) ->	(let res = (eval_aexp i r s h) in
 																match res with 
 																	  ValueInt(pos) ->	if (pos >= lb && pos <= ub) then s#get (Loc(vo+pos))
-																						else raise INDEX_OUT_OF_BOUNDS
-																	| _ -> raise INDEX_OUT_OF_BOUNDS
+																						else raise (INDEX_OUT_OF_BOUNDS "eval_aexp:vec:I" )
+																	| _ ->				raise (INDEX_OUT_OF_BOUNDS "eval_aexp:vec:II")
 															)
 						| _ -> raise (SYNTAX "Eval_aexp(Vec): Not a Descr_Vector")
 					)
@@ -126,9 +128,9 @@ and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) (h:heap) fi fr =
 		(match aValue,bValue with 
 			  ValueInt(op1),ValueInt(op2) ->		ValueInt(fi op1 op2)
 			| ValueFloat(op1),ValueFloat(op2) ->	ValueFloat(fr op1 op2)
-			| ValueInt(_),ValueFloat(_) ->			raise DIFFERENT_TYPE_OPERATION
-			| ValueFloat(_),ValueInt(_) ->			raise DIFFERENT_TYPE_OPERATION
-			| _,_ ->								raise POINTER_ARITHMETIC
+			| ValueInt(_),ValueFloat(_) ->			raise (DIFFERENT_TYPE_OPERATION "aexp_op_fun:I")
+			| ValueFloat(_),ValueInt(_) ->			raise (DIFFERENT_TYPE_OPERATION "aexp_op_fun:II")
+			| _,_ ->								raise (POINTER_ARITHMETIC "aexp_op_fun")
 		)
 
 let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
@@ -160,7 +162,7 @@ let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
                                 			  							decl_eval decls r s h
                                 			| (Float,ValueFloat(fv)) ->	r#set x (Val(ValueFloat(fv)));
                                 										decl_eval decls r s h
-                                			| (_,_) ->					raise DIFFERENT_TYPE_ASSIGNATION
+                                			| (_,_) ->					raise (DIFFERENT_TYPE_ASSIGNATION "decl_eval:Const")
                                 		)
     | Dec(x,Pointer(pcontent))::decls ->
     		let nl = s#newmem
@@ -246,8 +248,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 																	(match res with 
 																		ValueInt(pos) -> if (pos >= lb && pos <= ub)
 																			then s#set (Loc(vo+pos)) ret
-																			else raise INDEX_OUT_OF_BOUNDS
-																		| _ -> raise INDEX_OUT_OF_BOUNDS
+																			else raise (INDEX_OUT_OF_BOUNDS "exec:Ass:LVec:I")
+																		| _ -> raise (INDEX_OUT_OF_BOUNDS "exec:Ass:LVec:II")
 																	)
 																)
 														| _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
@@ -284,32 +286,31 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 						if (not(eval_bexp b r s h)) then exec (Repeat(c,b)) r s h
     | Write(e)      ->  let ret = (eval_aexp e r s h) in
 						(match ret with
-							  ValueInt(op1) ->		print_string ("Int:\t"^(string_of_int op1)^"\n")
-							| ValueFloat(op1) ->	print_string ("Flt:\t"^(string_of_float op1)^"\n")
-							| StoreLoc(op1) ->		print_string ("SLc:\t"^(string_of_loc op1)^"\n")
-							| HeapLoc(op1) ->		print_string ("HLc:\t"^(string_of_loc op1)^"\n")
+							  ValueInt(op1) ->		print_string ("\nInt:\t"^(string_of_int op1))
+							| ValueFloat(op1) ->	print_string ("\nFlt:\t"^(string_of_float op1) )
+							| StoreLoc(op1) ->		print_string ("\nSLc:\t"^(string_of_loc op1))
+							| HeapLoc(op1) ->		print_string ("\nHLc:\t"^(string_of_loc op1))
 						)
     | PCall(id,input_exprs)
                     ->  let input_values = (eval_actual_params input_exprs r s h) in
 						(match (r#get id) with
 							  Descr_Prcd(params,locals,cmds) -> if ((type_checking input_values params))
 							  										then exec_proc id input_values r s h
-																	else raise PARAMETERS_DO_NOT_MATCH
+																	else raise (PARAMETERS_DO_NOT_MATCH "Exec:PCall")
 							| _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
 						)
-	| Free(p) ->		(
-						let lookforloc (p:lexp) = (
+	| Free(p) ->		(let lookforloc (p:lexp) = (
 							match p with
 								  LVar(id) ->		get_value (get_residence id r) s h
 								| LVec(id,aexp) ->	(let off = (eval_aexp aexp r s h) in
 														match off with
 															  ValueInt(v) ->	get_value (get_residence_vec id v r) s h
-															| _ ->				raise INDEX_OUT_OF_BOUNDS
+															| _ ->				raise (INDEX_OUT_OF_BOUNDS "Exec:Free")
 													)
 								| Lunref(d) ->		raise (NOT_YET_IMPLEMENTED "")
-							) in match lookforloc p with
+							) in let d = lookforloc p in match d with
 								HeapLoc(l) -> h#free l
-								| _ -> raise DIFFERENT_TYPE_OPERATION
+								| _ -> raise (DIFFERENT_TYPE_OPERATION ("Exec:Free["^(string_of_value d)^"]"))
 						)
 
 (* execution of subprograms *)
