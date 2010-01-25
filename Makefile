@@ -24,7 +24,7 @@ runall:
 	for i in input/*; do echo "\nNow executing $$i"; ./$(APP) < $$i; done
 
 test: 
-	./test.sh
+	./.test.sh
 
 clean:
 	rm -f parser.mli parser.ml lexer.ml *.cmo *.cmi *~

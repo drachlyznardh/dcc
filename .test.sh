@@ -1,5 +1,5 @@
 #!/bin/bash
-for i in $(find input -name *.cre); do
+for i in $(find progs -name *.cre); do
 	echo -en "Testing $i: "
 	output=$(./interpreter < $i)
 	p=$?
