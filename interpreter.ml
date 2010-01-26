@@ -108,10 +108,17 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
 													); HeapLoc(l)
 						| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
 													let fc = h#lnewmem hm in
+														(let mkname (l:loc) = (
+															match l with
+																  Loc(a) ->	string_of_int a
+																| Null ->	raise (NULL_POINTER_EXCEPTION "decl_darray")
+															) in let n = mkname fc in
+																decl_eval ([Dec(n,Vector(b,lb,ub))]) r s h
+														);
 														(match b with
 															  Int ->	h#set_vec fc (ValueInt(0)) hm; HeapLoc(fc)
 															| Float ->	h#set_vec fc (ValueFloat(0.0)) hm; HeapLoc(fc)
-														)
+														);
 					)
     | Vec(v,i)  ->  (match r#get v with
 						  Descr_Vctr(_,lb,ub,Loc(vo)) ->	(let res = (eval_aexp i r s h) in
@@ -147,7 +154,6 @@ let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
     | LE  (a,b) ->  ((eval_aexp a r s h) <= (eval_aexp b r s h))
     | LT  (a,b) ->  ((eval_aexp a r s h)  < (eval_aexp b r s h))
     | Not (a)   ->  (not(eval_bexp a r s h))
-
 
 (* evaluation of declarations *)
 let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
