@@ -86,9 +86,8 @@ let print_value (v:value) = print_string (string_of_value v)
 let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ()
 
 (* Dynamic array names *)
-let mkloc (i:ide) : loc = (match i with
-	  Ide(n) ->	Loc(int_of_string n);
-)
+let mkloc (i:ide) : loc = match i with
+	  Ide(n) ->	Loc(int_of_string n)
 
 let mkid (l:loc) : ide = match l with
 	  Loc(n) ->	Ide(string_of_int n)
@@ -236,7 +235,7 @@ class heap size = object (self)
 	
 	method set_vec (l:loc) (v:value) (hm:int) = (
 		match hm with
-			  0 ->	self#show
+			  0 ->	()
 			| n ->	self#set l v;
 					self#set_vec (nextloc l) v (hm - 1)
 	)
@@ -264,7 +263,6 @@ class heap size = object (self)
 				match re with
 					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
 					  								self#bump_vec vl dim;
-					  								r#show;
 					| _ ->						raise (MY_FAULT "do_bump")
 		) with Not_found ->	self#bump l
 	)
@@ -294,8 +292,7 @@ class heap size = object (self)
 			let re = r#get (mkid l) in
 				match re with
 					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
-					  								self#sage_vec vl dim;
-					  								self#show
+					  								self#sage_vec vl dim
 					| _ ->						raise (MY_FAULT "do_sage")
 		) with Not_found ->	self#sage l
 	)
