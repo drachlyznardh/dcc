@@ -111,8 +111,9 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
     | Vec(v,i)  ->  (match r#get v with
 						  Descr_Vctr(_,lb,ub,Loc(vo)) ->	(let res = (eval_aexp i r s h) in
 																match res with 
-																	  ValueInt(pos) ->	if (pos >= lb && pos <= ub) then s#get (Loc(vo+pos))
-																						else raise (INDEX_OUT_OF_BOUNDS "eval_aexp:vec:I" )
+																	  ValueInt(pos) ->	if (pos >= lb && pos <= ub)
+																	  						then s#get (Loc(vo+pos))
+																							else raise (INDEX_OUT_OF_BOUNDS "eval_aexp:vec:I" )
 																	| _ ->				raise (INDEX_OUT_OF_BOUNDS "eval_aexp:vec:II")
 															)
 						| _ -> raise (SYNTAX "Eval_aexp(Vec): Not a Descr_Vector")
@@ -239,17 +240,14 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 															(* Now check for SAGE *)
 															(match oldv with
 																  HeapLoc(hl) ->	h#sage hl;
-																  					(*print_string("\n\t\t\tSAGE["^(string_of_value oldv)^"]")*)
 																| _ ->				()
 															);
 									  						(* Now check for BUMP *)
 									  						(match ret with
 									  							  HeapLoc(hl) ->	h#bump hl;
-									  							  					(*print_string("\n\t\t\tBUMP["^(string_of_value oldv)^"]")*)
 									  							| _ ->				()
 															);
 									  						set_value l ret s h;
-									  						h#show;
 								| LVec(v,idx) ->	(match r#get v with
 														  Descr_Vctr(_,lb,ub,Loc(vo)) ->
 																(let res = (eval_aexp idx r s h) in

@@ -18,7 +18,7 @@ eval:
 	$(CC) -o $(APP) lexer.cmo parser.cmo syntaxtree.cmo mem.cmo interpreter.cmo main.cmo
 
 run: 
-	./$(APP) < input/heap/double_malloc.cre
+	./$(APP) < progs/heap/win/double_malloc.cre
 
 runall:
 	for i in input/*; do echo "\nNow executing $$i"; ./$(APP) < $$i; done
