@@ -83,7 +83,16 @@ let string_of_value (v:value) = match v with
 
 let print_value (v:value) = print_string (string_of_value v)
 
-let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ();
+let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ()
+
+(* Dynamic array names *)
+let mkloc (i:ide) : loc = (match i with
+	  Ide(n) ->	Loc(int_of_string n);
+)
+
+let mkid (l:loc) : ide = match l with
+	  Loc(n) ->	Ide(string_of_int n)
+	| Null ->	raise (NULL_POINTER_EXCEPTION ("mkid"))
 
 (* Heap class *)
 class env size = object (self)
@@ -127,7 +136,8 @@ class env size = object (self)
 						  Var(b,l) ->				print_string ("Var:"^(string_of_type b)^"->"^(string_of_loc l))
 						| Val(_) ->					print_string ("Val")
 						| Descr_Pntr(b,d,l) ->		print_string ("Pntr:"^(string_of_type b)^(string_of_int d)^"->"^(string_of_loc l))
-						| Descr_Vctr(b,lb,ub,l) ->	print_string ("Vctr:"^(string_of_type b)^"->"^(string_of_loc l)^":"^(string_of_int lb)^":"^(string_of_int ub))
+						| Descr_Vctr(b,lb,ub,l) ->	print_string ("Vctr:"^(string_of_type b)^"->");
+													print_string ((string_of_loc l)^":"^(string_of_int lb)^":"^(string_of_int ub))
 						| Descr_Prcd(_,_,_) ->		print_string ("Prcd")
 					)
 				) and length = Hashtbl.length tbl in
@@ -226,9 +236,8 @@ class heap size = object (self)
 	
 	method set_vec (l:loc) (v:value) (hm:int) = (
 		match hm with
-			  0 ->	print_string ("\n"); self#show
-			| n ->	print_string ("\nsetting "^(string_of_int hm)^" more from "^(string_of_loc l));
-					self#set l v;
+			  0 ->	self#show
+			| n ->	self#set l v;
 					self#set_vec (nextloc l) v (hm - 1)
 	)
 	
@@ -249,6 +258,17 @@ class heap size = object (self)
 		)
 	)
 	
+	method do_bump (l:loc) (r:env) = (
+		try (
+			let re = r#get (mkid l) in
+				match re with
+					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
+					  								self#bump_vec vl dim;
+					  								r#show;
+					| _ ->						raise (MY_FAULT "do_bump")
+		) with Not_found ->	self#bump l
+	)
+	
 	(* Decrease counter for an HEntry: if 0, remove it *)
 	method sage (l:loc) = (
 		check_loc l "sage";
@@ -267,6 +287,17 @@ class heap size = object (self)
 			self#sage l;
 			self#sage_vec (nextloc l) (hm - 1)
 		)
+	)
+	
+	method do_sage (l:loc) (r:env) = (	
+		try (
+			let re = r#get (mkid l) in
+				match re with
+					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
+					  								self#sage_vec vl dim;
+					  								self#show
+					| _ ->						raise (MY_FAULT "do_sage")
+		) with Not_found ->	self#sage l
 	)
 	
 	method free (l:loc) = (

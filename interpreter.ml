@@ -133,7 +133,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
                         | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
     | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in	(* First I get the unreference last location *)
-    					do_deref (depth + 1) idaddr s h				(* Then I get that final location stored value *)
+    					do_deref (depth+1) idaddr s h				(* Then I get that final location stored value *)
     | Ref(i)    ->	get_residence i r
     | Malloc(t) ->	(match t with
 						  Basic(b) ->			let l = h#newmem in
@@ -148,14 +148,8 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
 													); HeapLoc(l)
 						| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
 													let fc = h#lnewmem hm in
-														(let mkname (l:loc) = (
-															match l with
-																  Loc(a) ->	Ide(string_of_int a)
-																| Null ->	raise (NULL_POINTER_EXCEPTION "decl_darray")
-															) in let n = mkname fc in
-																decl_eval ([Dec(n,Vector(b,lb,ub))]) r s h;
-																r#show
-														);
+														let n = mkid fc in
+															decl_eval ([Dec(n,Vector(b,lb,ub))]) r s h;
 														(match b with
 															  Int ->	h#set_vec fc (ValueInt(0)) hm; HeapLoc(fc)
 															| Float ->	h#set_vec fc (ValueFloat(0.0)) hm; HeapLoc(fc)
@@ -250,12 +244,12 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 								  						let oldv = get_value l s h in
 															(* Now check for SAGE *)
 															(match oldv with
-																  HeapLoc(hl) ->	h#sage hl;
+																  HeapLoc(hl) ->	h#do_sage hl r;
 																| _ ->				()
 															);
 									  						(* Now check for BUMP *)
 									  						(match ret with
-									  							  HeapLoc(hl) ->	h#bump hl;
+									  							  HeapLoc(hl) ->	h#do_bump hl r;
 									  							| _ ->				()
 															);
 									  						set_value l ret s h;
