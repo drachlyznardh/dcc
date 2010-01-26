@@ -1,0 +1,17 @@
+program
+
+	var x: ^int;
+	var y: ^int;
+	var z: ^int;
+
+begin
+
+	x := malloc(array[0 .. 1] of int);
+	
+	y := malloc(array[4 .. 7] of int);
+	
+	z := malloc(array[1 .. 2] of int);
+	x := malloc(array[3 .. 4] of int);
+	y := malloc(array[0 .. 7] of float);
+
+end
