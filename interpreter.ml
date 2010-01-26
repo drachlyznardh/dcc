@@ -247,7 +247,16 @@ let rec assign_values (f:param list) (a:value list) (r:env) (s:store) (h:heap) =
 
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
-      Ass(i,e) ->		let ret = eval_aexp e r s h in
+      Ass(i,e) ->		let ret = eval_aexp e r s h
+      						and b = get_bType i r
+      					in
+							(match ret,b with
+								  ValueInt(_),Int ->		()
+								| ValueFloat(_),Float ->	()
+								| StoreLoc(_),loc ->		()
+								| HeapLoc(_),loc ->			()
+								| f,s ->					raise (DIFFERENT_TYPE_OPERATION "exec:Ass")
+							);
 							(match i with
 								  LVar(id)  ->		let l = get_residence id r in
 								  						let oldv = get_value l s h in
