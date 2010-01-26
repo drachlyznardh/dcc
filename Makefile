@@ -13,14 +13,13 @@ eval: $(CMOS)
 
 interpreter.cmo: mem.cmo 
 
-lexer.cmo: lexer.mll
+lexer.ml: lexer.mll
 	$(LEX) lexer.mll
-	$(CC) -c lexer.ml
 
 %.cmo: %.ml
 	$(CC) -c $<
 
-parser.ml: syntaxtree.cmo parser.mly
+parser.ml: parser.mly
 	$(YACC) parser.mly
 	$(CC) -c parser.mli
 
@@ -37,6 +36,6 @@ clean:
 	rm -f parser.mli parser.ml lexer.ml *.cmo *.cmi *~
 
 veryclean: clean
-	rm $(APP)
+	rm -f $(APP)
 
 .PHONY: test clean veryclean

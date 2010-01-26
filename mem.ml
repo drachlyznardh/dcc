@@ -254,29 +254,37 @@ class heap size = object (self)
 		) with Not_found -> raise (DOUBLE_FREE "heap#free")
 	)
 	
+	method isfree (i:int) = (
+		try (
+			let l = Loc(i) in
+				let h = Hashtbl.find htbl l in
+					match h with
+						HEntry(c,v) ->	if c == 0 then (
+											Hashtbl.remove htbl l;	(* Destroy the non-referenced cell *)
+											true					(* Cell is now free *)
+										) else false				(* Cell is refered, can't override *)
+		) with Not_found -> true									(* Cell is already free *)
+	)
+	
 	method newmem = (
-		let isfree (i:int) = (
-			try (
-				let l = Loc (i) in
-					let h = Hashtbl.find htbl l in match h with
-						HEntry(c,v) ->	if c == 0 then (Hashtbl.remove htbl l; print_string ("\nnewmem:rm"^(string_of_loc l)); true)
-										else false
-			) with Not_found -> true
-		) in let rec keepsearching (n:int) =
-			if isfree n then Loc(n)
+		let rec keepsearching (n:int) =
+			if self#isfree n then Loc(n)
 			else keepsearching (n + 1)
 		in keepsearching 0
 	)
 
-(*	
-	method lnewmem = (
-		let isfree (n:int) = (try (let _ = Hashtbl.find htbl (Loc(i)) in false) with Not_found -> true)
-			in let rec arefree (f:int) (left:int) = (if isfree f then arefree (f + 1) (left - 1))
-				in let rec keepsearching (f:int) (left:int) =
-					if arefree f left then (Loc(f))
-					else keepsearching 
+	method lnewmem (hm:int) = (
+		let rec arefree (f:int) (left:int) = (
+			if self#isfree f then
+				if left == 0 then (true, f-left)
+				else arefree (f + 1) (left - 1)
+			else (false, f+left)
+		) in let rec keepsearching (f:int) (left:int) = (
+				let res = arefree f left in match res with
+					  (true,fc) ->	Loc(fc)
+					| (false,fc) ->	keepsearching fc hm
+			) in keepsearching 0 hm
 	)
-*)
 	
 	method show = (
 		let lookat (l:loc) (h:hentry) = (
