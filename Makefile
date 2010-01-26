@@ -11,7 +11,8 @@ CMOS = $(MLS:.ml=.cmo)
 eval: $(CMOS)
 	$(CC) -o $(APP) $(CMOS)
 
-interpreter.cmo: mem.cmo 
+interpreter.cmo: mem.cmo
+main.cmo: mem.cmo
 
 lexer.ml: lexer.mll
 	$(LEX) lexer.mll
@@ -24,7 +25,7 @@ parser.ml: parser.mly
 	$(CC) -c parser.mli
 
 run: 
-	./$(APP) < progs/heap/win/double_malloc.cre
+	./$(APP) < progs/heap/win/darray.cre
 
 runall:
 	for i in input/*; do echo "\nNow executing $$i"; ./$(APP) < $$i; done
