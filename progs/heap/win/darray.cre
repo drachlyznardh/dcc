@@ -9,7 +9,16 @@ begin
 	x := malloc(array[0 .. 1] of int);
 	y := malloc(array[4 .. 7] of int);
 	z := malloc(array[1 .. 2] of int);
+
+	write (x);
+	write (y);
+	write (z);
+
 	x := malloc(array[3 .. 4] of int);
 	y := malloc(array[0 .. 7] of float);
+
+	write (x);
+	write (y);
+	write (z);
 
 end

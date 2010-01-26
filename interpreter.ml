@@ -25,22 +25,26 @@ let pntr_depth (p:pType) : int =
 		| MPointer(next) -> 1 + (aux next)
 	in aux p
 
-let pntr_finaltype (p:pType) : bType =
+let pntr_bType (p:pType) : bType =
 	let rec aux p = match p with
 		  SPointer(v) -> v
 		| MPointer(next) -> aux next
 	in aux p
-
+	
 (* Get final identifier name from a pointer *)
-let pntr_get_data (p:dexp) (r:env) : (value * int) =
+let pntr_get_data (p:dexp) (r:env) : (bType * value * int) =
 	let rec aux (p:dexp) (r:env) = match p with
 		  Sunref(id) -> (match r#get id with
-		  					  Var(_,l) -> (StoreLoc(l), 1)
-		  					| Val(v) -> (v,1)
-		  					| Descr_Pntr(_,_,l) -> (StoreLoc(l),1)
+		  					  Var(b,l) ->			(b,StoreLoc(l), 1)
+		  					| Val(v) ->				(match v with
+		  												  ValueInt(_) ->	(Int,v,1)
+		  												| ValueFloat(_) ->	(Float,v,1)
+		  												| _ -> raise (MY_FAULT "pntr_get_data")
+		  											)
+		  					| Descr_Pntr(b,_,l) ->	(b,StoreLoc(l),1)
 		  					| _ -> (match id with Ide(name) -> raise (NOT_A_POINTER ("pntr_get_data["^name^"]")))
 		  				)
-		| Munref(next) -> let (a,b) = aux next r in (a, b+1)
+		| Munref(next) -> let (b,v,d) = aux next r in (b,v,d+1)
 	in aux p r
 	
 let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value = 
@@ -80,6 +84,11 @@ let set_value (l:value) (v:value) (s:store) (h:heap) =
 	| HeapLoc(hl) ->	h#set hl v
 	| _ -> raise (MY_FAULT "set_value")
 
+let get_bType (l:lexp) (r:env) : bType = match l with
+	  LVar(id)  ->		r#get_bType id
+	| LVec(vid,_) ->	r#get_bType vid
+	| Lunref(u) ->		let (b,_,_) = pntr_get_data u r in b
+
 (** END OF FUFFA **)
 
 (* evaluation of declarations *)
@@ -105,7 +114,7 @@ let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = ( match d with
                                 		)
     | Dec(x,Pointer(pcontent))::decls ->	let nl = s#newmem
 												and depth = pntr_depth pcontent
-												and ptype = pntr_finaltype pcontent
+												and ptype = pntr_bType pcontent
 											in (
 												r#set x (Descr_Pntr(ptype,depth,nl));
 												s#set nl (StoreLoc(Null));
@@ -132,8 +141,8 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
                         | Descr_Pntr(_,_,l) ->	s#get l
                         | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
-    | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in	(* First I get the unreference last location *)
-    					do_deref (depth+1) idaddr s h				(* Then I get that final location stored value *)
+    | Unref(p)  ->	let (_,l,d) = (pntr_get_data p r) in	(* First I get the unreference last location *)
+    					do_deref (d+1) l s h				(* Then I get that final location stored value *)
     | Ref(i)    ->	get_residence i r
     | Malloc(t) ->	(match t with
 						  Basic(b) ->			let l = h#newmem in
@@ -253,9 +262,9 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 									  							| _ ->				()
 															);
 									  						set_value l ret s h;
-								| LVec(v,idx) ->	(match r#get v with
+								| LVec(vid,off) ->	(match r#get vid with
 														  Descr_Vctr(_,lb,ub,Loc(vo)) ->
-																(let res = (eval_aexp idx r s h) in
+																(let res = (eval_aexp off r s h) in
 																	(match res with 
 																		ValueInt(pos) -> if (pos >= lb && pos <= ub)
 																			then s#set (Loc(vo+pos)) ret
@@ -266,8 +275,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 														| _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
 													)
 
-								| Lunref(u) ->		(let (idaddr, depth) = pntr_get_data u r in
-														set_value (do_deref (depth) idaddr s h) ret s h
+								| Lunref(u) ->		(let (_,l,d) = pntr_get_data u r in
+														set_value (do_deref (d) l s h) ret s h
 													)
                         	)
     | Blk([]) ->		()

@@ -124,6 +124,20 @@ class env size = object (self)
 		) in subget rtbl i
 	)
 	
+	method get_bType (i:ide) = (
+		let re = self#get i in
+			match re with
+				  Var(b,_) ->				b
+				| Val(v) ->					(match v with
+	  											  ValueInt(_) ->	Int
+	  											| ValueFloat(_) ->	Float
+	  											| _ -> raise (MY_FAULT "get_bType: const")
+	  										)
+				| Descr_Pntr(b,_,_) ->		b
+				| Descr_Vctr(b,_,_,_) ->	b
+				| Descr_Prcd(_) ->			raise (MY_FAULT "get_bType")
+	)
+
 	method show = (
 		let rec showtbl (t:(string * (ide,rentry) Hashtbl.t) list) = (
 			let looktbl (n:string) (tbl:(ide,rentry) Hashtbl.t) = (
