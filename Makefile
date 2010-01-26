@@ -5,17 +5,24 @@ CC   := ocamlc
 
 APP  := interpreter
 
-eval:
-	$(CC) -c syntaxtree.ml
-	$(YACC) parser.mly
-	$(CC) -c parser.mli	
-	$(CC) -c parser.ml	
+MLS = $(wildcard *.ml)
+CMOS = $(MLS:.ml=.cmo)
+
+eval: syntaxtree.cmo parser.ml lexer.cmo parser.cmo $(CMOS)
+	$(CC) -o $(APP) mem.cmo lexer.cmo parser.cmo $(CMOS)
+
+interpreter.cmo: mem.cmo 
+
+lexer.cmo: lexer.mll
 	$(LEX) lexer.mll
 	$(CC) -c lexer.ml
-	$(CC) -c mem.ml
-	$(CC) -c interpreter.ml
-	$(CC) -c main.ml	
-	$(CC) -o $(APP) lexer.cmo parser.cmo syntaxtree.cmo mem.cmo interpreter.cmo main.cmo
+
+%.cmo: %.ml
+	$(CC) -c $<
+
+parser.ml: syntaxtree.cmo parser.mly
+	$(YACC) parser.mly
+	$(CC) -c parser.mli
 
 run: 
 	./$(APP) < progs/heap/win/double_malloc.cre
