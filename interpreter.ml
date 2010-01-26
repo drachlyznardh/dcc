@@ -170,26 +170,24 @@ let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = match d with
                                 										decl_eval decls r s h
                                 			| (_,_) ->					raise (DIFFERENT_TYPE_ASSIGNATION "decl_eval:Const")
                                 		)
-    | Dec(x,Pointer(pcontent))::decls ->
-    		let nl = s#newmem
-    			and depth = pntr_depth pcontent
-    			and ptype = pntr_finaltype pcontent
-    		in (
-    			r#set x (Descr_Pntr(ptype,depth,nl));
-    			s#set nl (StoreLoc(Null));
-    			decl_eval decls r s h
-    		)
-    | Dec(x,Vector(t,lb,ub))::decls
-                                ->  let nl = s#newmem and dim = ub - lb + 1 in
-	                                    let vo = moveloc nl lb in
-				                            (match t with
-				                                  Int ->	r#set x (Descr_Vctr(Int,lb,ub,vo));
-				                                  			s#setvec (nl) dim (ValueInt(0));
-				                                  			decl_eval decls r s h
-				                                | Float ->	r#set x (Descr_Vctr(Float,lb,ub,vo));
-				                                			s#setvec (nl) dim (ValueFloat(0.0));
-				                                			decl_eval decls r s h
-				                            )
+    | Dec(x,Pointer(pcontent))::decls ->	let nl = s#newmem
+												and depth = pntr_depth pcontent
+												and ptype = pntr_finaltype pcontent
+											in (
+												r#set x (Descr_Pntr(ptype,depth,nl));
+												s#set nl (StoreLoc(Null));
+												decl_eval decls r s h
+											)
+    | Dec(x,Vector(t,lb,ub))::decls ->  	let nl = s#newmem and dim = ub - lb + 1 in
+						                        let vo = moveloc nl lb in
+									                (match t with
+									                      Int ->	r#set x (Descr_Vctr(Int,lb,ub,vo));
+									                      			s#setvec (nl) dim (ValueInt(0));
+									                      			decl_eval decls r s h
+									                    | Float ->	r#set x (Descr_Vctr(Float,lb,ub,vo));
+									                    			s#setvec (nl) dim (ValueFloat(0.0));
+									                    			decl_eval decls r s h
+									                )
 
 (* declaration of subprograms *)
 let rec sub_prog_decl_eval (d: sub_prog list) (r:env) (s:store) (h:heap) = match d with
