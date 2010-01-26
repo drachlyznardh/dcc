@@ -5,11 +5,11 @@ CC   := ocamlc
 
 APP  := interpreter
 
-MLS = $(wildcard *.ml)
+MLS = syntaxtree.ml parser.ml lexer.ml mem.ml interpreter.ml main.ml
 CMOS = $(MLS:.ml=.cmo)
 
-eval: syntaxtree.cmo parser.ml lexer.cmo parser.cmo $(CMOS)
-	$(CC) -o $(APP) mem.cmo lexer.cmo parser.cmo $(CMOS)
+eval: $(CMOS)
+	$(CC) -o $(APP) $(CMOS)
 
 interpreter.cmo: mem.cmo 
 
