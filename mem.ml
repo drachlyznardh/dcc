@@ -224,6 +224,14 @@ class heap size = object (self)
 		) with Not_found -> Hashtbl.replace htbl l (HEntry(0,v));
 	)
 	
+	method set_vec (l:loc) (v:value) (hm:int) = (
+		match hm with
+			  0 ->	print_string ("\n"); self#show
+			| n ->	print_string ("\nsetting "^(string_of_int hm)^" more from "^(string_of_loc l));
+					self#set l v;
+					self#set_vec (nextloc l) v (hm - 1)
+	)
+	
 	(* Increase counter for an HEntry *)
 	method bump (l:loc) = (
 		check_loc l "bump";
@@ -232,6 +240,13 @@ class heap size = object (self)
 				Hashtbl.remove htbl l;
 				Hashtbl.replace htbl l (HEntry(c + 1,v))
 		) with Not_found -> ();
+	)
+	
+	method bump_vec (l:loc) (hm:int) = (
+		if hm > 0 then (
+			self#bump l;
+			self#bump_vec (nextloc l) (hm - 1)
+		)
 	)
 	
 	(* Decrease counter for an HEntry: if 0, remove it *)
@@ -245,6 +260,13 @@ class heap size = object (self)
 						else Hashtbl.replace htbl l (HEntry(c - 1,v))
 			)
 		) with Not_found -> raise (DOUBLE_FREE "heap#sage")
+	)
+	
+	method sage_vec (l:loc) (hm:int) = (
+		if hm > 0 then (
+			self#sage l;
+			self#sage_vec (nextloc l) (hm - 1)
+		)
 	)
 	
 	method free (l:loc) = (
@@ -266,24 +288,29 @@ class heap size = object (self)
 		) with Not_found -> true									(* Cell is already free *)
 	)
 	
-	method newmem = (
+	method arefree (f:int) (left:int) = (
+		if self#isfree f then
+			if left == 0 then
+				(true, f)							(* Done: this cell is the last one *)
+			else
+				self#arefree (f + 1) (left - 1)		(* Keep on looking on next cell *)
+		else (false, f+1)
+	)
+
+	method newmem :loc = (
 		let rec keepsearching (n:int) =
 			if self#isfree n then Loc(n)
 			else keepsearching (n + 1)
 		in keepsearching 0
 	)
 
-	method lnewmem (hm:int) = (
-		let rec arefree (f:int) (left:int) = (
-			if self#isfree f then
-				if left == 0 then (true, f-left)
-				else arefree (f + 1) (left - 1)
-			else (false, f+left)
-		) in let rec keepsearching (f:int) (left:int) = (
-				let res = arefree f left in match res with
-					  (true,fc) ->	Loc(fc)
-					| (false,fc) ->	keepsearching fc hm
-			) in keepsearching 0 hm
+	method lnewmem (hm:int) :loc = (
+		let rec keepsearching (f:int) (left:int) = (
+			let res = self#arefree f left in
+				match res with
+					  (true,fc) ->	Loc(fc - hm)				(* Mission accomplished: the first cell  *)
+					| (false,fc) ->	keepsearching (fc + 1) hm	(* Need to restart the quest, from the next cell *)
+		) in keepsearching 0 hm
 	)
 	
 	method show = (

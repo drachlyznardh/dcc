@@ -96,17 +96,22 @@ let rec eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = match e with
     					do_deref (depth+1) idaddr s h				(* Then I get that final location stored value *)
     | Ref(i)    ->	get_residence i r
     | Malloc(t) ->	(match t with
-						  Basic(b) ->		let l = h#newmem in
-						  						(match b with
-						  							  Int -> h#set l (ValueInt(0));
-						  							| Float -> h#set l (ValueFloat(0.0));
-						  						); HeapLoc(l)
-						| Const(_,_) ->		raise (SYNTAX "You don't want to declare dynamic constant, do you?")
-						| Pointer(p) ->		let l = h#newmem in
-												(match p with 
-													_ -> h#set l (HeapLoc(Null))
-												); HeapLoc(l)
-						| Vector(_,_,_) ->	raise (SYNTAX "Just no.")
+						  Basic(b) ->			let l = h#newmem in
+						  							(match b with
+						  								  Int -> h#set l (ValueInt(0));
+						  								| Float -> h#set l (ValueFloat(0.0));
+						  							); HeapLoc(l)
+						| Const(_,_) ->			raise (SYNTAX "You don't want to declare dynamic constant, do you?")
+						| Pointer(p) ->			let l = h#newmem in
+													(match p with 
+														_ -> h#set l (HeapLoc(Null))
+													); HeapLoc(l)
+						| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
+													let fc = h#lnewmem hm in
+														(match b with
+															  Int ->	h#set_vec fc (ValueInt(0)) hm; HeapLoc(fc)
+															| Float ->	h#set_vec fc (ValueFloat(0.0)) hm; HeapLoc(fc)
+														)
 					)
     | Vec(v,i)  ->  (match r#get v with
 						  Descr_Vctr(_,lb,ub,Loc(vo)) ->	(let res = (eval_aexp i r s h) in
