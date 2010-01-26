@@ -127,7 +127,7 @@ class env size = object (self)
 						  Var(b,l) ->				print_string ("Var:"^(string_of_type b)^"->"^(string_of_loc l))
 						| Val(_) ->					print_string ("Val")
 						| Descr_Pntr(b,d,l) ->		print_string ("Pntr:"^(string_of_type b)^(string_of_int d)^"->"^(string_of_loc l))
-						| Descr_Vctr(b,_,_,l) ->	print_string ("Vctr:"^(string_of_type b)^"->"^(string_of_loc l))
+						| Descr_Vctr(b,lb,ub,l) ->	print_string ("Vctr:"^(string_of_type b)^"->"^(string_of_loc l)^":"^(string_of_int lb)^":"^(string_of_int ub))
 						| Descr_Prcd(_,_,_) ->		print_string ("Prcd")
 					)
 				) and length = Hashtbl.length tbl in

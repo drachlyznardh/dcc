@@ -133,7 +133,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
                         | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
                     )
     | Unref(p)  ->	let (idaddr, depth) = (pntr_get_data p r) in	(* First I get the unreference last location *)
-    					do_deref (depth+1) idaddr s h				(* Then I get that final location stored value *)
+    					do_deref (depth + 1) idaddr s h				(* Then I get that final location stored value *)
     | Ref(i)    ->	get_residence i r
     | Malloc(t) ->	(match t with
 						  Basic(b) ->			let l = h#newmem in
