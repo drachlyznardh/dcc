@@ -1,0 +1,11 @@
+program
+
+	const i : int := 15;
+	
+begin
+
+	write (i);
+	i := 17;
+	write (i);
+
+end
