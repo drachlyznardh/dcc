@@ -191,6 +191,13 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
 		)
 )
 
+let get_offset (e:aexp) (r:env) (s:store) (h:heap) :int = (
+	let res = eval_aexp e r s h in
+		match res with
+			  ValueInt(off) ->	off
+			| _ ->				raise (NOT_INTEGER_INDEX "get_offset")
+)
+
 let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
       B(b)      ->  b
     | And (a,b) ->  ((eval_bexp a r s h) && (eval_bexp b r s h))
@@ -258,35 +265,33 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 								| f,s ->					raise (DIFFERENT_TYPE_OPERATION "exec:Ass")
 							);
 							(match i with
-								  LVar(id)  ->		let l = get_residence id r in
-								  						let oldv = get_value l s h in
-															(* Now check for SAGE *)
-															(match oldv with
-																  HeapLoc(hl) ->	h#do_sage hl r;
-																| _ ->				()
-															);
-									  						(* Now check for BUMP *)
-									  						(match ret with
-									  							  HeapLoc(hl) ->	h#do_bump hl r;
-									  							| _ ->				()
-															);
-									  						set_value l ret s h;
-								| LVec(vid,off) ->	(match r#get vid with
-														  Descr_Vctr(_,lb,ub,Loc(vo)) ->
-																(let res = (eval_aexp off r s h) in
-																	(match res with 
-																		ValueInt(pos) -> if (pos >= lb && pos <= ub)
-																			then s#set (Loc(vo+pos)) ret
-																			else raise (INDEX_OUT_OF_BOUNDS "exec:Ass:LVec:I")
-																		| _ -> raise (INDEX_OUT_OF_BOUNDS "exec:Ass:LVec:II")
-																	)
-																)
-														| _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
-													)
-
-								| Lunref(u) ->		(let (_,l,d) = pntr_get_data u r in
-														set_value (do_deref (d) l s h) ret s h
-													)
+								  LVar(id)  ->
+									  	let l = get_residence id r in
+					  						let oldv = get_value l s h in
+												(* Now check for SAGE *)
+												(match oldv with
+													  HeapLoc(hl) ->	h#do_sage hl r;
+													| _ ->				()
+												);
+						  						(* Now check for BUMP *)
+						  						(match ret with
+						  							  HeapLoc(hl) ->	h#do_bump hl r;
+						  							| _ ->				()
+												);
+						  						set_value l ret s h;
+								| LVec(vid,off) ->
+										let res = get_offset off r s h in
+											(match r#get vid with
+												  Descr_Vctr(_,lb,ub,Loc(vo)) ->
+												  		if (res >= lb && res <= ub)
+															then s#set (Loc(vo + res)) ret
+															else raise (INDEX_OUT_OF_BOUNDS "exec:Ass:LVec:I")
+												| Descr_Pntr(b,d,l) -> raise (MY_FAULT "Exec:Ass:LVec:Pntr")
+												| _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
+											)
+								| Lunref(u) ->
+										let (_,l,d) = pntr_get_data u r in
+											set_value (do_deref (d) l s h) ret s h
                         	)
     | Blk([]) ->		()
     | Blk(x::y) ->		exec x r s h;
