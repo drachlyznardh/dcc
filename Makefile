@@ -25,7 +25,7 @@ parser.ml: parser.mly
 	$(CC) -c parser.mli
 
 run: 
-	./$(APP) < progs/heap/win/darray.cre
+	./$(APP) < progs/win/darray-access.cre
 
 runall:
 	for i in input/*; do echo "\nNow executing $$i"; ./$(APP) < $$i; done
