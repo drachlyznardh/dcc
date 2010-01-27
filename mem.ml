@@ -119,7 +119,9 @@ class env size = object (self)
 	method get (i:ide) = (
 		let rec subget (tbl:(string * (ide,rentry) Hashtbl.t) list) (i:ide) = (
 			match tbl with
-				  [] ->				raise Not_found
+				  [] ->				(match i with
+				  						Ide(name) -> raise (NO_SUCH_HEAP_ENTRY ("env#get:"^name))
+				  					)
 				| (n,head)::tail ->	(try (Hashtbl.find head i)
 										with Not_found -> subget tail i)
 		) in subget rtbl i
@@ -132,7 +134,7 @@ class env size = object (self)
 				| Val(v) ->					(match v with
 	  											  ValueInt(_) ->	Int
 	  											| ValueFloat(_) ->	Float
-	  											| _ -> raise (MY_FAULT "get_bType: const")
+	  											| _ ->				raise (MY_FAULT "get_bType: const")
 	  										)
 				| Descr_Pntr(b,_,_) ->		b
 				| Descr_Vctr(b,_,_,_) ->	b
@@ -365,8 +367,9 @@ class heap size = object (self)
 		) in
 			print_string "\nHeap:";
 			let length = Hashtbl.length htbl in
-				if length = 0 then print_string "\tEmpty\n"
-				else Hashtbl.iter lookat htbl 
+				if length = 0
+					then print_string "\tEmpty\n"
+					else Hashtbl.iter lookat htbl 
 	)
 
 end;;

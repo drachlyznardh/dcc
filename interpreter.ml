@@ -119,15 +119,15 @@ let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = (
 																			decl_eval decls r s h
 												| (_,_) ->					raise (DIFFERENT_TYPE_ASSIGNATION "decl_eval:Const")
 											)
-    | Dec(x,Pointer(pcontent))::decls ->	let nl = s#newmem
-												and depth = pntr_depth pcontent
-												and ptype = pntr_bType pcontent
-											in (
-												r#set x (Descr_Pntr(ptype,depth,nl));
-												s#set nl (StoreLoc(Null));
-												decl_eval decls r s h
-											)
-	| Dec(x,Vector(t,lb,ub))::decls ->  	let nl = s#newmem and dim = ub - lb + 1 in
+		| Dec(x,Pointer(p))::decls ->	let nl = s#newmem
+											and depth = pntr_depth p
+											and ptype = pntr_bType p
+										in (
+											r#set x (Descr_Pntr(ptype,depth,nl));
+											s#set nl (StoreLoc(Null));
+											decl_eval decls r s h
+										)
+		| Dec(x,Vector(t,lb,ub))::decls ->	let nl = s#newmem and dim = ub - lb + 1 in
 												let vo = moveloc nl lb in
 													(match t with
 														  Int ->	r#set x (Descr_Vctr(Int,lb,ub,vo));
@@ -144,39 +144,45 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 		  N(n)      ->  ValueInt(n)
 		| R(n)      ->  ValueFloat(n)
 		| Ident(i)  ->  (match r#get i with
-		                      Var(_,l) ->			s#get l
-		                    | Val(v) ->				v
-		                    | Descr_Pntr(_,_,l) ->	s#get l
-		                    | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp:Ident: Id not found("^name^")") )
+							  Var(_,l) ->			s#get l
+							| Val(v) ->				v
+							| Descr_Pntr(_,_,l) ->	s#get l
+							| _ ->					(match i with 
+														Ide(name) -> raise (SYNTAX ("Eval_aexp:Ident: Id not found("^name^")") )
+													)
 		                )
 		| Unref(p)  ->	let (_,l,d) = (pntr_get_data p r) in	(* First I get the unreference last location *)
-							do_deref (d+1) l s h				(* Then I get that final location stored value *)
+							do_deref (d + 1) l s h				(* Then I get that final location stored value *)
 		| Ref(i)    ->	get_residence i r
 		| Malloc(t) ->	(match t with
 							  Basic(b) ->			let l = h#newmem in
 														(match b with
 															  Int -> h#set l (ValueInt(0));
 															| Float -> h#set l (ValueFloat(0.0));
-														); HeapLoc(l)
+														);
+														HeapLoc(l)
 							| Const(_,_) ->			raise (SYNTAX "You don't want to declare dynamic constant, do you?")
 							| Pointer(p) ->			let l = h#newmem in
 														(match p with 
 															_ -> h#set l (HeapLoc(Null))
-														); HeapLoc(l)
+														);
+														HeapLoc(l)
 							| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
 														let fc = h#lnewmem hm in
 															let n = mkid fc in
 																r#set n (Descr_Vctr(b,lb,ub,fc));
 																(match b with
-																	  Int ->	h#set_vec fc (ValueInt(0)) hm; HeapLoc(fc)
-																	| Float ->	h#set_vec fc (ValueFloat(0.0)) hm; HeapLoc(fc)
+																	  Int ->	h#set_vec fc (ValueInt(0)) hm; 
+																	  			HeapLoc(fc)
+																	| Float ->	h#set_vec fc (ValueFloat(0.0)) hm;
+																				HeapLoc(fc)
 																);
 						)
 		| Vec(v,off) ->	let res = get_offset off r s h in
 							(match r#get v with
 								  Descr_Vctr(_,lb,ub,Loc(vo)) ->	if (res >= lb && res <= ub)
-											  						then s#get (Loc(vo + res))
-																	else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:I" )
+												  						then s#get (Loc(vo + res))
+																		else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:I" )
 								| Descr_Pntr(_,_,l) ->
 									let desc = r#get (mkid l) in
 										(match desc with
