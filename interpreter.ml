@@ -355,7 +355,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 										else raise (PARAMETERS_DO_NOT_MATCH "Exec:PCall")
 							| _ ->	raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
 						)
-	| Free(p) ->		(let lookforloc (p:lexp) = (
+	| Free(p) ->		(let lookforloc (p:lexp) :value = (
 							match p with
 								  LVar(id) ->		get_value (get_residence id r) s h
 								| LVec(id,aexp) ->	(let off = (eval_aexp aexp r s h) in
@@ -363,7 +363,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 															  ValueInt(v) ->	get_value (get_residence_vec id v r) s h
 															| _ ->				raise (INDEX_OUT_OF_BOUNDS "Exec:Free")
 													)
-								| Lunref(d) ->		raise (NOT_YET_IMPLEMENTED "")
+								| Lunref(u) ->		let (_,l,d) = pntr_get_data u r in
+														get_value (do_deref d l s h) s h
 							) in let d = lookforloc p in 
 								match d with
 									  HeapLoc(l) ->	h#free l
