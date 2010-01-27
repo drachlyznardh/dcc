@@ -9,8 +9,8 @@ begin
 	x := malloc (array[0 .. 7] of int);
 	
 	for y := 0 to 7 do begin
-		if y / 2 = 0 then x[y] = y * 2;
-		else x[y] = y;
+		if y / 2 = 0 then x[y] := y * 2;
+		else x[y] := y;
 	end
 	
 	for y := 0 to 7 do write (x[y]);
