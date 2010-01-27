@@ -170,6 +170,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 							| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
 														let fc = h#lnewmem hm in
 															let n = mkid fc in
+																print_string ("\nMalloc("^(string_of_loc fc)^"/"^(get_name n)^")\n");
 																r#set n (Descr_Vctr(b,lb,ub,fc));
 																(match b with
 																	  Int ->	h#set_vec fc (ValueInt(0)) hm; 
@@ -282,8 +283,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 								| f,s ->					raise (DIFFERENT_TYPE_OPERATION "Exec:Ass")
 							);
 							(match i with
-								  LVar(id)  ->
-									  	let l = get_residence id r in
+								  LVar(id)  ->	let l = get_residence id r in
 					  						let oldv = get_value l s h in
 												(* Now check for SAGE *)
 												(match oldv with

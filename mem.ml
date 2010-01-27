@@ -119,9 +119,7 @@ class env size = object (self)
 	method get (i:ide) = (
 		let rec subget (tbl:(string * (ide,rentry) Hashtbl.t) list) (i:ide) = (
 			match tbl with
-				  [] ->				raise Not_found(*match i with
-				  						Ide(name) -> raise (NO_SUCH_HEAP_ENTRY ("env#get:"^name))
-				  					*)
+				  [] ->				raise Not_found
 				| (n,head)::tail ->	(try (Hashtbl.find head i)
 										with Not_found -> subget tail i)
 		) in subget rtbl i
@@ -275,15 +273,13 @@ class heap size = object (self)
 	)
 	
 	method do_bump (l:loc) (r:env) = (
-		print_string ("Do_bumping "^(string_of_loc l));
-		self#show;
 		try (
 			let re = r#get (mkid l) in
 				match re with
 					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
 					  								self#bump_vec vl dim;
 					| _ ->						raise (MY_FAULT "do_bump")
-		) with Not_found ->	print_string("Re not found\n"); self#bump l
+		) with Not_found ->	self#bump l
 	)
 	
 	(* Decrease counter for an HEntry: if 0, remove it *)
