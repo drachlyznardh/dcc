@@ -1,0 +1,9 @@
+program
+
+	const x :int := 0;
+
+begin
+
+	x := 1343;	$ Assignment to constant $
+
+end

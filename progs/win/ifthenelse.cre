@@ -10,7 +10,7 @@ begin
 	x := 0;
 	y := 3;
 
-	if (x<y) then
+	if (x < y) then
 		begin
 			z := 1;
 			h := 0;

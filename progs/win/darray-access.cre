@@ -8,23 +8,23 @@ program
 begin
 
 	y := 0;
-	x := malloc (array[0 .. 7] of int); $ LOL $
+	x := malloc (array[0 .. 7] of int); $ 8 little integer in my array... $
 	
 	for y := 0 to 7 do begin
 		if y % 2 = 0
-			then x[y] := y * 10 + 7; $ Fuck $
-			else x[y] := y;
+			then x[y] := y * 10 + 7;	$ Even elements get a power up! $
+			else x[y] := y;				$ Odd elements pass unchanged $
 	end
 	
-	for y := 0 to 7 do write (x[y]);
+	for y := 0 to 7 do write (x[y]);	$ Write down everthing $
 
 	f := 156354.4;
 	g := 36783.24;
 	
 	write (f);
 	write (g);
-	write (f / g);
-	write (f % g);	$ LOL $
+	write (f / g);	$ Quotient between two float $
+	write (f % g);	$ Rest from two float? Oh yeah! $
 
 	free (x);
 
