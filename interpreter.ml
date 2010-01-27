@@ -185,7 +185,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
     | Sub (a,b) ->	aexp_op_fun a b r s h (-) (-.)
     | Mul (a,b) ->	aexp_op_fun a b r s h ( * ) ( *. )
     | Div (a,b) ->	aexp_op_fun a b r s h (/) (/.)
-    | Mod (a,b) ->	aexp_op_fun a b r s h (mod) (-.)
+    | Mod (a,b) ->	aexp_op_fun a b r s h (mod) (mod_float)
 
 ) and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) (h:heap) fi fr = (
 	let aValue = (eval_aexp a r s h) and bValue = (eval_aexp b r s h) in
