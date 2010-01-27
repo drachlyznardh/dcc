@@ -39,10 +39,11 @@ let pntr_get_data (p:dexp) (r:env) : (bType * value * int) =
 		  					| Val(v) ->				(match v with
 		  												  ValueInt(_) ->	(Int,v,1)
 		  												| ValueFloat(_) ->	(Float,v,1)
-		  												| _ -> raise (MY_FAULT "pntr_get_data")
+		  												| _ ->				raise (MY_FAULT "pntr_get_data")
 		  											)
 		  					| Descr_Pntr(b,_,l) ->	(b,StoreLoc(l),1)
-		  					| _ -> (match id with Ide(name) -> raise (NOT_A_POINTER ("pntr_get_data["^name^"]")))
+		  					| _ ->					(match id with 
+		  												  Ide(name) ->	raise (NOT_A_POINTER ("pntr_get_data["^name^"]")))
 		  				)
 		| Munref(next) -> let (b,v,d) = aux next r in (b,v,d+1)
 	in aux p r
@@ -51,22 +52,25 @@ let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value =
 	if depth == 0 then
 		v
 	else match v with
-		  StoreLoc(l) -> do_deref (depth - 1) (s#get l) s h
-		| HeapLoc(l) -> do_deref (depth - 1) (h#get l) s h
-		| ValueInt(v) -> raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
-		| ValueFloat(v) -> raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
+		  StoreLoc(l) ->	do_deref (depth - 1) (s#get l) s h
+		| HeapLoc(l) ->		do_deref (depth - 1) (h#get l) s h
+		| ValueInt(v) ->	raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
+		| ValueFloat(v) ->	raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
 (* Where is this identifier's value saved? *)
-let get_residence (i:ide) (r:env) :value = match r#get i with
-	  Var(_,l) ->				StoreLoc(l)
-	| Val(_) ->					raise (RESIDENT_EVIL "It's a Constant!")
-	| Descr_Pntr(_,_,l) ->		StoreLoc(l)
-	| Descr_Vctr(_,_,_,l) ->	StoreLoc(l)
-	| Descr_Prcd(_,_,_) ->		raise (RESIDENT_EVIL "It's a Procedure!")
+let get_residence (i:ide) (r:env) :value =
+	match r#get i with
+		  Var(_,l) ->				StoreLoc(l)
+		| Val(_) ->					raise (RESIDENT_EVIL "It's a Constant!")
+		| Descr_Pntr(_,_,l) ->		StoreLoc(l)
+		| Descr_Vctr(_,_,_,l) ->	StoreLoc(l)
+		| Descr_Prcd(_,_,_) ->		raise (RESIDENT_EVIL "It's a Procedure!")
 
-let get_residence_vec (i:ide) (off:int) (r:env) :value = match r#get i with
-	  Descr_Vctr(_,lb,ub,Loc(l)) ->	let real = l - lb + off in StoreLoc(Loc(real))
-	| _ ->							raise (MY_FAULT "get_residence_vec")
+let get_residence_vec (i:ide) (off:int) (r:env) :value =
+	match r#get i with
+		  Descr_Vctr(_,lb,ub,Loc(l)) ->	let real = l - lb + off in
+		  									StoreLoc(Loc(real))
+		| _ ->							raise (MY_FAULT "get_residence_vec")
 
 (* I need THAT value, I don't mind where is it saved. *)
 let get_value (l:value) (s:store) (h:heap) :value = match l with
@@ -74,7 +78,9 @@ let get_value (l:value) (s:store) (h:heap) :value = match l with
 	| HeapLoc(hl) ->	h#get hl
 	| _ -> raise (MY_FAULT "get_value")
 
-let get_name (i:ide) = match i with Ide(name) -> name
+let get_name (i:ide) =
+	match i with
+		  Ide(name) ->	name
 
 (* I need something to get changed: do it and don't bother me *)
 let set_value (l:value) (v:value) (s:store) (h:heap) = 
@@ -84,34 +90,35 @@ let set_value (l:value) (v:value) (s:store) (h:heap) =
 	| HeapLoc(hl) ->	h#set hl v
 	| _ -> raise (MY_FAULT "set_value")
 
-let get_bType (l:lexp) (r:env) : bType = match l with
-	  LVar(id)  ->		r#get_bType id
-	| LVec(vid,_) ->	r#get_bType vid
-	| Lunref(u) ->		let (b,_,_) = pntr_get_data u r in b
+let get_bType (l:lexp) (r:env) : bType =
+	match l with
+		  LVar(id)  ->		r#get_bType id
+		| LVec(vid,_) ->	r#get_bType vid
+		| Lunref(u) ->		let (b,_,_) = pntr_get_data u r in b
 
 (** END OF FUFFA **)
 
 (* evaluation of declarations *)
-let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = ( match d with
-      []                        ->  ()
-    | Dec(x,Basic(tipo))::decls ->  let nl = s#newmem
-                                    in (
-                                         match tipo with
-                                              Int   ->	r#set x (Var(Int,nl));
-                                              			s#set nl (ValueInt(0));
-                                              			decl_eval decls r s h
-                                            | Float ->	r#set x (Var(Float,nl));
-														s#set nl (ValueFloat(0.0));
-                                            			decl_eval decls r s h
-                                        )
-    | Dec(x,Const(t,e))::decls ->	let nv = eval_aexp e r s h in
-                                		(match (t,nv) with
-                                			  (Int,ValueInt(iv)) ->		r#set x (Val(ValueInt(iv)));
-                                			  							decl_eval decls r s h
-                                			| (Float,ValueFloat(fv)) ->	r#set x (Val(ValueFloat(fv)));
-                                										decl_eval decls r s h
-                                			| (_,_) ->					raise (DIFFERENT_TYPE_ASSIGNATION "decl_eval:Const")
-                                		)
+let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = (
+	match d with
+		  []                        ->  ()
+		| Dec(x,Basic(tipo))::decls ->  let nl = s#newmem in
+											(match tipo with
+												  Int   ->	r#set x (Var(Int,nl));
+															s#set nl (ValueInt(0));
+															decl_eval decls r s h
+												| Float ->	r#set x (Var(Float,nl));
+															s#set nl (ValueFloat(0.0));
+															decl_eval decls r s h
+											)
+		| Dec(x,Const(t,e))::decls ->	let nv = eval_aexp e r s h in
+											(match (t,nv) with
+												(Int,ValueInt(iv)) ->		r#set x (Val(ValueInt(iv)));
+																			decl_eval decls r s h
+												| (Float,ValueFloat(fv)) ->	r#set x (Val(ValueFloat(fv)));
+																			decl_eval decls r s h
+												| (_,_) ->					raise (DIFFERENT_TYPE_ASSIGNATION "decl_eval:Const")
+											)
     | Dec(x,Pointer(pcontent))::decls ->	let nl = s#newmem
 												and depth = pntr_depth pcontent
 												and ptype = pntr_bType pcontent
@@ -120,72 +127,73 @@ let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = ( match d with
 												s#set nl (StoreLoc(Null));
 												decl_eval decls r s h
 											)
-    | Dec(x,Vector(t,lb,ub))::decls ->  	let nl = s#newmem and dim = ub - lb + 1 in
-						                        let vo = moveloc nl lb in
-									                (match t with
-									                      Int ->	r#set x (Descr_Vctr(Int,lb,ub,vo));
-									                      			s#setvec (nl) dim (ValueInt(0));
-									                      			decl_eval decls r s h
-									                    | Float ->	r#set x (Descr_Vctr(Float,lb,ub,vo));
-									                    			s#setvec (nl) dim (ValueFloat(0.0));
-									                    			decl_eval decls r s h
-									                )
+	| Dec(x,Vector(t,lb,ub))::decls ->  	let nl = s#newmem and dim = ub - lb + 1 in
+												let vo = moveloc nl lb in
+													(match t with
+														  Int ->	r#set x (Descr_Vctr(Int,lb,ub,vo));
+																	s#setvec (nl) dim (ValueInt(0));
+																	decl_eval decls r s h
+														| Float ->	r#set x (Descr_Vctr(Float,lb,ub,vo));
+																	s#setvec (nl) dim (ValueFloat(0.0));
+																	decl_eval decls r s h
+													)
 )
 (* evaluation of arithmetical expressions *)
-and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
-      N(n)      ->  ValueInt(n)
-    | R(n)      ->  ValueFloat(n)
-    | Ident(i)  ->  (match r#get i with
-                          Var(_,l) ->			s#get l
-                        | Val(v) ->				v
-                        | Descr_Pntr(_,_,l) ->	s#get l
-                        | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp:Ident: Id not found("^name^")") )
-                    )
-    | Unref(p)  ->	let (_,l,d) = (pntr_get_data p r) in	(* First I get the unreference last location *)
-    					do_deref (d+1) l s h				(* Then I get that final location stored value *)
-    | Ref(i)    ->	get_residence i r
-    | Malloc(t) ->	(match t with
-						  Basic(b) ->			let l = h#newmem in
-						  							(match b with
-						  								  Int -> h#set l (ValueInt(0));
-						  								| Float -> h#set l (ValueFloat(0.0));
-						  							); HeapLoc(l)
-						| Const(_,_) ->			raise (SYNTAX "You don't want to declare dynamic constant, do you?")
-						| Pointer(p) ->			let l = h#newmem in
-													(match p with 
-														_ -> h#set l (HeapLoc(Null))
-													); HeapLoc(l)
-						| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
-													let fc = h#lnewmem hm in
-														let n = mkid fc in
-															r#set n (Descr_Vctr(b,lb,ub,fc));
-															(match b with
-																  Int ->	h#set_vec fc (ValueInt(0)) hm; HeapLoc(fc)
-																| Float ->	h#set_vec fc (ValueFloat(0.0)) hm; HeapLoc(fc)
-															);
-					)
-    | Vec(v,off) ->	let res = get_offset off r s h in
-    					(match r#get v with
-							  Descr_Vctr(_,lb,ub,Loc(vo)) ->	if (res >= lb && res <= ub)
-										  						then s#get (Loc(vo + res))
-																else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:I" )
-							| Descr_Pntr(_,_,l) ->
-								let desc = r#get (mkid l) in
-									(match desc with
-										  Descr_Vctr(_,lb,ub,Loc(vo)) ->
-										  		if (res >= lb && res <= ub)
-										  			then h#get (Loc(vo + res))
-										  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")							
-										| _ -> raise (MY_FAULT "Eval_aexp:Vec")
-									)
-						| _ -> raise (SYNTAX "Eval_aexp:Vec: That's no descriptor")
-					)
-    
-    | Sum (a,b) ->	aexp_op_fun a b r s h (+) (+.)
-    | Sub (a,b) ->	aexp_op_fun a b r s h (-) (-.)
-    | Mul (a,b) ->	aexp_op_fun a b r s h ( * ) ( *. )
-    | Div (a,b) ->	aexp_op_fun a b r s h (/) (/.)
-    | Mod (a,b) ->	aexp_op_fun a b r s h (mod) (mod_float)
+and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
+	match e with
+		  N(n)      ->  ValueInt(n)
+		| R(n)      ->  ValueFloat(n)
+		| Ident(i)  ->  (match r#get i with
+		                      Var(_,l) ->			s#get l
+		                    | Val(v) ->				v
+		                    | Descr_Pntr(_,_,l) ->	s#get l
+		                    | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp:Ident: Id not found("^name^")") )
+		                )
+		| Unref(p)  ->	let (_,l,d) = (pntr_get_data p r) in	(* First I get the unreference last location *)
+							do_deref (d+1) l s h				(* Then I get that final location stored value *)
+		| Ref(i)    ->	get_residence i r
+		| Malloc(t) ->	(match t with
+							  Basic(b) ->			let l = h#newmem in
+														(match b with
+															  Int -> h#set l (ValueInt(0));
+															| Float -> h#set l (ValueFloat(0.0));
+														); HeapLoc(l)
+							| Const(_,_) ->			raise (SYNTAX "You don't want to declare dynamic constant, do you?")
+							| Pointer(p) ->			let l = h#newmem in
+														(match p with 
+															_ -> h#set l (HeapLoc(Null))
+														); HeapLoc(l)
+							| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
+														let fc = h#lnewmem hm in
+															let n = mkid fc in
+																r#set n (Descr_Vctr(b,lb,ub,fc));
+																(match b with
+																	  Int ->	h#set_vec fc (ValueInt(0)) hm; HeapLoc(fc)
+																	| Float ->	h#set_vec fc (ValueFloat(0.0)) hm; HeapLoc(fc)
+																);
+						)
+		| Vec(v,off) ->	let res = get_offset off r s h in
+							(match r#get v with
+								  Descr_Vctr(_,lb,ub,Loc(vo)) ->	if (res >= lb && res <= ub)
+											  						then s#get (Loc(vo + res))
+																	else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:I" )
+								| Descr_Pntr(_,_,l) ->
+									let desc = r#get (mkid l) in
+										(match desc with
+											  Descr_Vctr(_,lb,ub,Loc(vo)) ->
+											  		if (res >= lb && res <= ub)
+											  			then h#get (Loc(vo + res))
+											  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")							
+											| _ -> raise (MY_FAULT "Eval_aexp:Vec")
+										)
+							| _ -> raise (SYNTAX "Eval_aexp:Vec: That's no descriptor")
+						)
+		
+		| Sum (a,b) ->	aexp_op_fun a b r s h (+) (+.)
+		| Sub (a,b) ->	aexp_op_fun a b r s h (-) (-.)
+		| Mul (a,b) ->	aexp_op_fun a b r s h ( * ) ( *. )
+		| Div (a,b) ->	aexp_op_fun a b r s h (/) (/.)
+		| Mod (a,b) ->	aexp_op_fun a b r s h (mod) (mod_float)
 
 ) and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) (h:heap) fi fr = (
 	let aValue = (eval_aexp a r s h) and bValue = (eval_aexp b r s h) in
@@ -214,10 +222,11 @@ let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
     | Not (a)   ->  (not(eval_bexp a r s h))
 
 (* declaration of subprograms *)
-let rec sub_prog_decl_eval (d: sub_prog list) (r:env) (s:store) (h:heap) = match d with
-      [] -> ()
-    | Proc(x,params,locals,cmds)::decls ->	r#set x (Descr_Prcd(params,locals,cmds));
-    										sub_prog_decl_eval decls r s h
+let rec sub_prog_decl_eval (d: sub_prog list) (r:env) (s:store) (h:heap) =
+	match d with
+		  [] -> ()
+		| Proc(x,params,locals,cmds)::decls ->	r#set x (Descr_Prcd(params,locals,cmds));
+												sub_prog_decl_eval decls r s h
 
 
 (* evaluation of actual parameter list *)
@@ -226,26 +235,22 @@ let rec eval_actual_params (e:aexp list) (r:env) (s:store) (h:heap) = match e wi
     | esp::vl   ->  (eval_aexp esp r s h)::(eval_actual_params vl r s h)
 
 (* prepare for execution of subprograms *)
-let type_checking (input_values:value list) (parameters:param list) = 
-    let rec check_types (actuals:value list) (formals:param list) :bool =
-        match (actuals,formals) with
-              [],[] -> true
-            | (v)::acts,Par(id,tipo)::forms ->
-                (
-                 match v with
-                      ValueInt(_) ->	if (tipo = Int) then (check_types acts forms)
-										else false
-	                | ValueFloat(_) ->	if (tipo = Float) then (check_types acts forms)
-										else false
-                    | StoreLoc(_) ->	raise (SYNTAX "You cannot use StoreLoc")
-                    | HeapLoc(_) ->		raise (SYNTAX "You cannot use HeapLoc")
-                )
-            | _ -> raise (SYNTAX "Type_checking: error")
+let type_check (input_values:value list) (parameters:param list) = 
+    let rec do_check (av:value list) (fp:param list) :bool =
+        match (av,fp) with
+              [],[] ->						true
+            | (v)::acts,Par(id,t)::forms ->
+	            	(match v,t with
+						  ValueInt(_),Int ->		do_check acts forms
+						| ValueFloat(_),Float ->	do_check acts forms
+						| _,Int ->					raise (PARAMETERS_DO_NOT_MATCH "type_check:should be int")
+						| _,Float ->				raise (PARAMETERS_DO_NOT_MATCH "type_check:should be float")
+					)
+            | _ ->							raise (SYNTAX "Type_checking: error")
     in
         if (List.length(input_values) != List.length(parameters))
             then false
-        else
-            (check_types input_values parameters)
+        	else (do_check input_values parameters)
 
 let rec assign_values (f:param list) (a:value list) (r:env) (s:store) (h:heap) =
     match (f,a) with
@@ -305,7 +310,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 											)
 								| Lunref(u) ->
 										let (_,l,d) = pntr_get_data u r in
-											set_value (do_deref (d) l s h) ret s h
+											set_value (do_deref d l s h) ret s h
                         	)
     | Blk([]) ->		()
     | Blk(x::y) ->		exec x r s h;
@@ -313,39 +318,42 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
     | Ite(b,c1,c2) ->	if (eval_bexp b r s h) then (exec c1 r s h)
                         else (exec c2 r s h)
     | While(b,c) ->		if (not(eval_bexp b r s h)) then exec (While(b,c)) r s h
-    | For(i,valmin_exp,valmax_exp,c) ->
-						let valmin = eval_aexp valmin_exp r s h
+    | For(i,minexp,maxexp,c) ->
+						let min = eval_aexp minexp r s h
                         	and update_counter l s = (match (s#get l) with
 								  ValueInt(n) ->	s#set l (ValueInt(n + 1))
 								| _ ->				raise (NOT_INTEGER_INDEX "Exec:For:update_counter")
 							) in 
 							(match r#get i with
-								  Var(_,l) ->	(
-												s#set l valmin;
-												let rec exec_for s =
+								  Var(_,l) ->	(s#set l min;											(* Assign min value to counter *)
+												let rec exec_for s = (
 													exec c r s h;
-													let ret = (eval_bexp (LT(Ident(i), valmax_exp)) r s h) in
-														if (ret) then (update_counter l s; exec_for s)
-												in exec_for s
+													if eval_bexp (LT(Ident(i), maxexp)) r s h then (	(* Check condition *)
+														update_counter l s;								(* Then update counter *)
+														exec_for s										(* Then execute again *)
+													)
+												) in exec_for s											(* Starting from the beginning *)
 												)
 								| _ ->			raise (SYNTAX "Exec(For): Not a Variable")
 							)
-    | Repeat(c,b)   ->  exec c r s h;
-						if (not(eval_bexp b r s h)) then exec (Repeat(c,b)) r s h
-    | Write(e)      ->  let ret = (eval_aexp e r s h) in
-						(match ret with
-							  ValueInt(op1) ->		print_string ("\nInt:\t"^(string_of_int op1))
-							| ValueFloat(op1) ->	print_string ("\nFlt:\t"^(string_of_float op1) )
-							| StoreLoc(op1) ->		print_string ("\nSLc:\t"^(string_of_loc op1))
-							| HeapLoc(op1) ->		print_string ("\nHLc:\t"^(string_of_loc op1))
-						)
-    | PCall(id,input_exprs)
-                    ->  let input_values = (eval_actual_params input_exprs r s h) in
+    | Repeat(c,b)   ->  exec c r s h;						(* Execute body command once, then ... *)
+						if (not(eval_bexp b r s h))			(* ... until the condition is satisfied ... *)
+							then exec (Repeat(c,b)) r s h	(* ... repeat same command one more time *)
+    | Write(e)      ->  let ret = (eval_aexp e r s h) in	(* Evaluate the expression, then print its value on screen *)
+							(match ret with
+								  ValueInt(op1) ->		print_string ("\nInt:\t"^(string_of_int op1))
+								| ValueFloat(op1) ->	print_string ("\nFlt:\t"^(string_of_float op1) )
+								| StoreLoc(op1) ->		print_string ("\nSLc:\t"^(string_of_loc op1))
+								| HeapLoc(op1) ->		print_string ("\nHLc:\t"^(string_of_loc op1))
+							)
+    | PCall(id,exprs)
+                    ->  let input_values = eval_actual_params exprs r s h in
 						(match (r#get id) with
-							  Descr_Prcd(params,locals,cmds) -> if ((type_checking input_values params))
-							  										then exec_proc id input_values r s h
-																	else raise (PARAMETERS_DO_NOT_MATCH "Exec:PCall")
-							| _ -> raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
+							  Descr_Prcd(params,locals,cmds) ->
+									if ((type_check input_values params))
+										then exec_proc id input_values r s h
+										else raise (PARAMETERS_DO_NOT_MATCH "Exec:PCall")
+							| _ ->	raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
 						)
 	| Free(p) ->		(let lookforloc (p:lexp) = (
 							match p with
@@ -356,9 +364,10 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 															| _ ->				raise (INDEX_OUT_OF_BOUNDS "Exec:Free")
 													)
 								| Lunref(d) ->		raise (NOT_YET_IMPLEMENTED "")
-							) in let d = lookforloc p in match d with
-								  HeapLoc(l) ->	h#free l
-								| _ ->			raise (DIFFERENT_TYPE_OPERATION ("Exec:Free["^(string_of_value d)^"]"))
+							) in let d = lookforloc p in 
+								match d with
+									  HeapLoc(l) ->	h#free l
+									| _ ->			raise (DIFFERENT_TYPE_OPERATION ("Exec:Free["^(string_of_value d)^"]"))
 						)
 
 (* execution of subprograms *)
