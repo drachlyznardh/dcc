@@ -4,16 +4,16 @@ program
 	var y : int;
 	var f : float;
 	var g : float;
-	
+
 begin
 
 	y := 0;
-	x := malloc (array[0 .. 7] of int);
+	x := malloc (array[0 .. 7] of int); $ LOL $
 	
 	for y := 0 to 7 do begin
-		write (y % 2);
-		if y % 2 = 0 then x[y] := y * 10 + 7;
-		else x[y] := y;
+		if y % 2 = 0
+			then x[y] := y * 10 + 7; $ Fuck $
+			else x[y] := y;
 	end
 	
 	for y := 0 to 7 do write (x[y]);
@@ -24,6 +24,8 @@ begin
 	write (f);
 	write (g);
 	write (f / g);
-	write (f % g);
+	write (f % g);	$ LOL $
+
+	free (x);
 
 end
