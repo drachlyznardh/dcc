@@ -12,12 +12,13 @@ exception UnknownChar;;
 let integer = '-'? ['0'-'9']+
 let real    = '-'? ['0'-'9']+['.']['0'-'9']*
 let ident   = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
-let whatever = '.'*
+
+let comment = '/' '*' _* '*' '/'
 
 (* RULES *)
 
-rule lex =
-	  parse integer	{ NAT (int_of_string (Lexing.lexeme lexbuf)) }
+rule lex = parse
+	  integer		{ NAT (int_of_string (Lexing.lexeme lexbuf)) }
 	| real			{ REAL(float_of_string (Lexing.lexeme lexbuf)) }
 
 	| "true"		{ TRUE }
@@ -76,6 +77,7 @@ rule lex =
 
 	| [' ' '\t']	{ lex lexbuf }
 	| ['\r']		{ lex lexbuf }
+	| comment		{ lex lexbuf }
 	| ['\n']		{ lexbuf.lex_curr_p <- {lexbuf.lex_curr_p
 						with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1};
 						lex lexbuf }

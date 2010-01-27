@@ -30,12 +30,12 @@ open Syntaxtree;;
 %%
 
 program 
-    : PROGRAM opt_dec_list opt_proc_list cmd EOF  { Program($2,$3,$4) }
+    : PROGRAM opt_dec_list opt_proc_list cmd EOF	{ Program($2,$3,$4) }
     ;
 
 opt_dec_list
-    :                                             { [] }
-    | dec_list                                    { $1 }
+    :												{ [] }
+    | dec_list										{ $1 }
     ;
 
 dec_list
@@ -49,9 +49,9 @@ dec
 	;
 
 gType
-    : bType                                       { Basic($1) }
-    | ARRAY LBRACKET NAT DOTS NAT RBRACKET OF bType { Vector($8,$3,$5) }
-    | pType										  { Pointer($1) }
+    : bType											{ Basic($1) }
+    | ARRAY LBRACKET NAT DOTS NAT RBRACKET OF bType	{ Vector($8,$3,$5) }
+    | pType											{ Pointer($1) }
     ;
 
 pType
