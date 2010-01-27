@@ -262,7 +262,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 								| ValueFloat(_),Float ->	()
 								| StoreLoc(_),loc ->		()
 								| HeapLoc(_),loc ->			()
-								| f,s ->					raise (DIFFERENT_TYPE_OPERATION "exec:Ass")
+								| f,s ->					raise (DIFFERENT_TYPE_OPERATION "Exec:Ass")
 							);
 							(match i with
 								  LVar(id)  ->
@@ -286,8 +286,16 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 												  		if (res >= lb && res <= ub)
 															then s#set (Loc(vo + res)) ret
 															else raise (INDEX_OUT_OF_BOUNDS "exec:Ass:LVec:I")
-												| Descr_Pntr(b,d,l) -> raise (MY_FAULT "Exec:Ass:LVec:Pntr")
-												| _ -> raise (SYNTAX "Exec(Ass,LVec): Not a Descr_Vector")
+												| Descr_Pntr(b,d,l) ->
+														let desc = r#get (mkid l) in
+															(match desc with
+																  Descr_Vctr(_,lb,ub,Loc(vo)) ->
+																		if (res >= lb && res <= ub)
+																			then h#set (Loc(vo + res)) ret
+																			else raise (INDEX_OUT_OF_BOUNDS "Exec:Ass:LVec:II")
+																| _ -> raise (MY_FAULT "Exec:Ass:LVec")
+															)
+												| _ -> raise (SYNTAX "Exec:Ass:LVec: That's no descriptor")
 											)
 								| Lunref(u) ->
 										let (_,l,d) = pntr_get_data u r in
@@ -303,7 +311,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 						let valmin = eval_aexp valmin_exp r s h
                         	and update_counter l s = (match (s#get l) with
 								  ValueInt(n) ->	s#set l (ValueInt(n + 1))
-								| _ ->				raise (SYNTAX "Use an integer for your counter, do NOT use other stuff")
+								| _ ->				raise (NOT_INTEGER_INDEX "Exec:For:update_counter")
 							) in 
 							(match r#get i with
 								  Var(_,l) ->	(
