@@ -28,7 +28,7 @@ run:
 	./$(APP) < progs/win/darray-access.cre
 
 runall:
-	for i in input/*; do echo "\nNow executing $$i"; ./$(APP) < $$i; done
+	for i in $$(find . -name '*.cre'); do echo "\nNow executing $$i"; ./$(APP) < $$i; done
 
 test: 
 	./.test.sh
