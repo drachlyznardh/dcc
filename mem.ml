@@ -32,6 +32,7 @@ exception NO_IDE						of string
 exception RESIDENT_EVIL					of string (* Constant and Procedure don't have a residence cell in Store *)
 exception SYNTAX						of string
 exception INDEX_OUT_OF_BOUNDS			of string
+exception NOT_INTEGER_INDEX				of string
 exception DIFFERENT_TYPE_OPERATION		of string
 exception DIFFERENT_TYPE_ASSIGNATION	of string
 exception DIFFERENT_TYPE_POINTER		of string
