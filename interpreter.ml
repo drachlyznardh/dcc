@@ -139,7 +139,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
                           Var(_,l) ->			s#get l
                         | Val(v) ->				v
                         | Descr_Pntr(_,_,l) ->	s#get l
-                        | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp(Ident): Id not found("^name^")") )
+                        | _ ->					match i with Ide(name) -> raise (SYNTAX ("Eval_aexp:Ident: Id not found("^name^")") )
                     )
     | Unref(p)  ->	let (_,l,d) = (pntr_get_data p r) in	(* First I get the unreference last location *)
     					do_deref (d+1) l s h				(* Then I get that final location stored value *)
@@ -164,21 +164,28 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
 																| Float ->	h#set_vec fc (ValueFloat(0.0)) hm; HeapLoc(fc)
 															);
 					)
-    | Vec(v,i)  ->  (match r#get v with
-						  Descr_Vctr(_,lb,ub,Loc(vo)) ->	(let res = (eval_aexp i r s h) in
-																match res with 
-																	  ValueInt(pos) ->	if (pos >= lb && pos <= ub)
-																	  						then s#get (Loc(vo+pos))
-																							else raise (INDEX_OUT_OF_BOUNDS "eval_aexp:vec:I" )
-																	| _ ->				raise (INDEX_OUT_OF_BOUNDS "eval_aexp:vec:II")
-															)
-						| _ -> raise (SYNTAX "Eval_aexp(Vec): Not a Descr_Vector")
+    | Vec(v,off) ->	let res = get_offset off r s h in
+    					(match r#get v with
+							  Descr_Vctr(_,lb,ub,Loc(vo)) ->	if (res >= lb && res <= ub)
+										  						then s#get (Loc(vo + res))
+																else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:I" )
+							| Descr_Pntr(_,_,l) ->
+								let desc = r#get (mkid l) in
+									(match desc with
+										  Descr_Vctr(_,lb,ub,Loc(vo)) ->
+										  		if (res >= lb && res <= ub)
+										  			then h#get (Loc(vo + res))
+										  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")							
+										| _ -> raise (MY_FAULT "Eval_aexp:Vec")
+									)
+						| _ -> raise (SYNTAX "Eval_aexp:Vec: That's no descriptor")
 					)
     
     | Sum (a,b) ->	aexp_op_fun a b r s h (+) (+.)
     | Sub (a,b) ->	aexp_op_fun a b r s h (-) (-.)
     | Mul (a,b) ->	aexp_op_fun a b r s h ( * ) ( *. )
     | Div (a,b) ->	aexp_op_fun a b r s h (/) (/.)
+    | Mod (a,b) ->	aexp_op_fun a b r s h (mod) (-.)
 
 ) and aexp_op_fun  (a:aexp) (b:aexp) (r:env) (s:store) (h:heap) fi fr = (
 	let aValue = (eval_aexp a r s h) and bValue = (eval_aexp b r s h) in
@@ -189,9 +196,8 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = ( match e with
 			| ValueFloat(_),ValueInt(_) ->			raise (DIFFERENT_TYPE_OPERATION "aexp_op_fun:II")
 			| _,_ ->								raise (POINTER_ARITHMETIC "aexp_op_fun")
 		)
-)
 
-let get_offset (e:aexp) (r:env) (s:store) (h:heap) :int = (
+) and get_offset (e:aexp) (r:env) (s:store) (h:heap) :int = (
 	let res = eval_aexp e r s h in
 		match res with
 			  ValueInt(off) ->	off

@@ -40,6 +40,7 @@ and aexp  =
 	| Sub		of aexp * aexp
 	| Mul		of aexp * aexp
 	| Div		of aexp * aexp
+	| Mod		of aexp * aexp
 
 (* boolean expressions *)
 type bexp =

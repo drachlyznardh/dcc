@@ -53,6 +53,7 @@ rule lex =
 	| "-"			{ MINUS }
 	| "*"			{ TIMES }
 	| "/"			{ DIVISION }
+	| "%"			{ MODULE }
 	| "="			{ EQUAL }
 	| "<="			{ LESSEQUAL }
 	| "<"			{ LESS }

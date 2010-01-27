@@ -14,7 +14,8 @@ open Syntaxtree;;
 %token			IF THEN ELSE WHILE DO FOR TO REPEAT UNTIL WRITE
 %token			ARRAY OF LBRACKET RBRACKET DOTS CALL MALLOC FREE
 
-%token			PLUS MINUS TIMES DIVISION EQUAL LESSEQUAL LESS AND OR NOT 
+%token			PLUS MINUS TIMES DIVISION MODULE
+%token			EQUAL LESSEQUAL LESS AND OR NOT 
 %token			ASSIGN CARET AT
 
 %token			SMCLN COLON COMMA
@@ -154,9 +155,10 @@ aexp_factor
     ;
 
 aexp_term
-    : aexp_term TIMES aexp_factor                 { Mul($1,$3) }
-    | aexp_term DIVISION aexp_factor              { Div($1,$3) }
-    | aexp_factor                                 { $1 };
+    : aexp_term TIMES aexp_factor					{ Mul($1,$3) }
+    | aexp_term DIVISION aexp_factor				{ Div($1,$3) }
+    | aexp_term MODULE aexp_factor					{ Mod($1,$3) }
+    | aexp_factor									{ $1 };
     ;
 
 aexp
