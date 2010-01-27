@@ -11,8 +11,8 @@ CMOS = $(MLS:.ml=.cmo)
 eval: $(CMOS)
 	$(CC) -o $(APP) $(CMOS)
 
-interpreter.cmo: mem.cmo
-main.cmo: mem.cmo
+interpreter.cmo: mem.ml
+main.cmo: mem.ml
 
 lexer.ml: lexer.mll
 	$(LEX) lexer.mll
