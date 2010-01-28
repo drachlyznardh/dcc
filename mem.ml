@@ -29,7 +29,13 @@ type hentry =
 (* exception *)
 exception NO_MEM						of string
 exception NO_IDE						of string
-exception RESIDENT_EVIL					of string (* Constant and Procedure don't have a residence cell in Store *)
+exception RESIDENT_EVIL					of string	(* Constant and Procedure don't have a residence cell in Store *)
+
+(* Not found exception *)
+exception NO_SUCH_ENV_ENTRY				of string	(* Environment entry not found *)
+exception NO_SUCH_STORE_ENTRY			of string	(* Store entry not found *)
+exception NO_SUCH_HEAP_ENTRY			of string	(* Heap entry not found *)
+
 exception SYNTAX						of string
 exception INDEX_OUT_OF_BOUNDS			of string
 exception NOT_INTEGER_INDEX				of string
@@ -41,50 +47,55 @@ exception PARAMETERS_DO_NOT_MATCH		of string
 
 exception NOT_YET_IMPLEMENTED 			of string	(* LOL, still to be done... *)
 exception NOT_A_POINTER					of string	(* While calculating pointer's depth *)
-exception NO_SUCH_HEAP_ENTRY			of string	(* Heap entry not found *)
 exception DEREF_ON_NOT_A_POINTER		of string	(* Are you dereferencing a pointer? Or maybe not? *)
 exception NULL_POINTER_EXCEPTION		of string
 exception DOUBLE_FREE					of string
 exception MY_FAULT						of string	(* Error due to interpreter malfunction *)
 
 (* Get location value from StoreLoc and HeapLoc *)
-let get_loc (v:value) : loc = match v with
-	  StoreLoc(l) -> l
-	| HeapLoc(l) -> l
-	| _ -> raise (SYNTAX "Not a location")
+let get_loc (v:value) : loc =
+	match v with
+		  StoreLoc(l) ->	l
+		| HeapLoc(l) ->		l
+		| _ ->				raise (NOT_A_POINTER "get_loc: not a location")
 
 (* Get next location *)
 let nextloc (l:loc) : loc = 
 	match l with
-		  Loc(value) -> Loc(value + 1)
-		| Null -> raise (NULL_POINTER_EXCEPTION "nextloc")
+		  Loc(value) ->	Loc(value + 1)
+		| Null ->		raise (NULL_POINTER_EXCEPTION "nextloc")
 
 let moveloc (l:loc) (v:int) =
 	match l with
-		  Loc(lv) -> Loc(lv + v)
-		| Null -> raise (NULL_POINTER_EXCEPTION "moveloc")
+		  Loc(lv) ->	Loc(lv + v)
+		| Null ->		raise (NULL_POINTER_EXCEPTION "moveloc")
 
-let print_loc (l:loc) = match l with
-	  Loc(v) -> print_int v
-	| Null -> print_string "Null"
+let print_loc (l:loc) =
+	match l with
+		  Loc(v) ->	print_int v
+		| Null ->	print_string "Null"
 
-let string_of_loc (l:loc) = match l with
-	  Loc(v) -> string_of_int v
-	| Null -> "Null"
+let string_of_loc (l:loc) =
+	match l with
+		  Loc(v) ->	string_of_int v
+		| Null ->	"Null"
 	
-let string_of_type (t:bType) = match t with
-	  Int -> "Int"
-	| Float -> "Float"
+let string_of_type (t:bType) =
+	match t with
+		  Int ->	"Int"
+		| Float ->	"Float"
 
-let string_of_value (v:value) = match v with
-	  ValueInt(i) -> 	"Int["^(string_of_int i)^"]"
-	| ValueFloat(f) ->	"Flt["^(string_of_float f)^"]"
-	| StoreLoc(sl) -> 	"SLc["^(string_of_loc sl)^"]"
-	| HeapLoc(hl) -> 	"HLc["^(string_of_loc hl)^"]"
+let string_of_value (v:value) =
+	match v with
+		  ValueInt(i) -> 	"Int["^(string_of_int i)^"]"
+		| ValueFloat(f) ->	"Flt["^(string_of_float f)^"]"
+		| StoreLoc(sl) -> 	"SLc["^(string_of_loc sl)^"]"
+		| HeapLoc(hl) -> 	"HLc["^(string_of_loc hl)^"]"
 
-let print_value (v:value) = print_string (string_of_value v)
-
-let check_loc (l:loc) (s:string) = match l with Null -> raise (NULL_POINTER_EXCEPTION s) | Loc(_) -> ()
+let check_loc (l:loc) (s:string) =
+	match l with 
+		  Null ->	raise (NULL_POINTER_EXCEPTION s)
+		| Loc(_) ->	()
 
 (* Dynamic array names *)
 let mkloc (i:ide) : loc = match i with
@@ -351,10 +362,10 @@ class heap size = object (self)
 				let re = r#get id in
 					match re with
 						  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
-						  								r#remove id;
-						  								self#free_vec vl dim
+						  								r#remove id;			(* Destroy descriptor *)
+						  								self#free_vec vl dim	(* Free each cell *)
 						| _ ->						raise (MY_FAULT "do_free")
-			) with Not_found -> ()
+			) with Not_found -> self#free l
 	)
 	
 	method isfree (i:int) = (

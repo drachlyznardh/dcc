@@ -170,6 +170,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 							| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
 														let fc = h#lnewmem hm in
 															let n = mkid fc in
+															(* TODO fix virtual origin  *)
 																print_string ("\nMalloc("^(string_of_loc fc)^"/"^(get_name n)^")\n");
 																r#set n (Descr_Vctr(b,lb,ub,fc));
 																(match b with
@@ -373,7 +374,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 														get_value (do_deref d l s h) s h
 							) in let d = lookforloc p in 
 								match d with
-									  HeapLoc(l) ->	h#free l
+									  HeapLoc(l) ->	h#do_free l r
 									| _ ->			raise (DIFFERENT_TYPE_OPERATION ("Exec:Free["^(string_of_value d)^"]"))
 						)
 
