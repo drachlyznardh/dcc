@@ -4,9 +4,15 @@ parser.cmo: syntaxtree.cmo parser.cmi
 parser.cmx: syntaxtree.cmx parser.cmi 
 lexer.cmo: parser.cmi 
 lexer.cmx: parser.cmx 
-mem.cmo: syntaxtree.cmo 
-mem.cmx: syntaxtree.cmx 
-interpreter.cmo: syntaxtree.cmo mem.cmo 
-interpreter.cmx: syntaxtree.cmx mem.cmx 
+exception.cmo: 
+exception.cmx: 
+types.cmo: syntaxtree.cmo 
+types.cmx: syntaxtree.cmx 
+common.cmo: types.cmo syntaxtree.cmo exception.cmo 
+common.cmx: types.cmx syntaxtree.cmx exception.cmx 
+mem.cmo: types.cmo syntaxtree.cmo exception.cmo common.cmo 
+mem.cmx: types.cmx syntaxtree.cmx exception.cmx common.cmx 
+interpreter.cmo: types.cmo syntaxtree.cmo mem.cmo exception.cmo common.cmo 
+interpreter.cmx: types.cmx syntaxtree.cmx mem.cmx exception.cmx common.cmx 
 main.cmo: syntaxtree.cmo parser.cmi lexer.cmo interpreter.cmo 
 main.cmx: syntaxtree.cmx parser.cmx lexer.cmx interpreter.cmx 

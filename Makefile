@@ -6,7 +6,7 @@ DEP  := ocamldep
 
 APP  := interpreter
 
-MLS = syntaxtree.ml parser.ml lexer.ml mem.ml interpreter.ml main.ml
+MLS = syntaxtree.ml parser.ml lexer.ml exception.ml types.ml common.ml mem.ml interpreter.ml main.ml
 CMOS = $(MLS:.ml=.cmo)
 
 eval: $(CMOS)
@@ -36,6 +36,9 @@ clean:
 
 veryclean: clean
 	rm -f $(APP)
+
+count:
+	cat *.ml | wc -l
 
 dep:
 	$(DEP) $(MLS) > .depend
