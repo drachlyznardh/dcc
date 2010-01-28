@@ -1,16 +1,18 @@
 open Syntaxtree;;
 
-(* memory *)
+(* Cell addresses *)
 type loc =
 	  Loc of int					(* Location, position *)
 	| Null							(* No location *)
 
+(* Cell values *)
 type value =
       ValueInt		of int				(* Type integer with value *)
     | ValueFloat	of float			(* Type float with value *)
     | StoreLoc		of loc				(* Location in the Store space *)
     | HeapLoc		of loc				(* Location in the Heap space *)
 
+(* Environment entries *)
 type rentry =
 	  Var of bType * loc			(* Variabile with type and residence *)
 	| Val of value					(* Constant value *)
@@ -21,15 +23,12 @@ type rentry =
 	| Descr_Prcd of
 		param list * dec list * cmd	(* Procedure with parameters, declarations and body *)
 
+(* Heap entries *)
 type hentry =
 	HEntry of int * value
 
-(* Heap entries *)
-
-(* exception *)
-exception NO_MEM						of string
-exception NO_IDE						of string
-exception RESIDENT_EVIL					of string	(* Constant and Procedure don't have a residence cell in Store *)
+(* Exception *)
+exception Resident_evil		of string	(* Constant and Procedure don't have a residence cell in Store *)
 
 (* Not found exception *)
 exception Env_404			of string	(* Environment entry not found *)
@@ -39,9 +38,11 @@ exception Heap_404			of string	(* Heap entry not found *)
 exception SYNTAX						of string
 exception INDEX_OUT_OF_BOUNDS			of string
 exception NOT_INTEGER_INDEX				of string
+
 exception DIFFERENT_TYPE_OPERATION		of string
 exception DIFFERENT_TYPE_ASSIGNATION	of string
 exception DIFFERENT_TYPE_POINTER		of string
+
 exception POINTER_ARITHMETIC			of string
 exception PARAMETERS_DO_NOT_MATCH		of string
 

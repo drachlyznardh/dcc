@@ -61,10 +61,10 @@ let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value =
 let get_residence (i:ide) (r:env) :value =
 	match r#get i with
 		  Var(_,l) ->				StoreLoc(l)
-		| Val(_) ->					raise (RESIDENT_EVIL "It's a Constant!")
+		| Val(_) ->					raise (Resident_evil "It's a Constant!")
 		| Descr_Pntr(_,_,l) ->		StoreLoc(l)
 		| Descr_Vctr(_,_,_,l) ->	StoreLoc(l)
-		| Descr_Prcd(_,_,_) ->		raise (RESIDENT_EVIL "It's a Procedure!")
+		| Descr_Prcd(_,_,_) ->		raise (Resident_evil "It's a Procedure!")
 
 let get_residence_vec (i:ide) (off:int) (r:env) :value =
 	match r#get i with
@@ -77,10 +77,6 @@ let get_value (l:value) (s:store) (h:heap) :value = match l with
 	  StoreLoc(sl) ->	s#get sl
 	| HeapLoc(hl) ->	h#get hl
 	| _ -> raise (MY_FAULT "get_value")
-
-let get_name (i:ide) =
-	match i with
-		  Ide(name) ->	name
 
 (* I need something to get changed: do it and don't bother me *)
 let set_value (l:value) (v:value) (s:store) (h:heap) = 
