@@ -2,6 +2,7 @@
 YACC := ocamlyacc
 LEX  := ocamllex
 CC   := ocamlc
+DEP  := ocamldep
 
 APP  := interpreter
 
@@ -10,10 +11,6 @@ CMOS = $(MLS:.ml=.cmo)
 
 eval: $(CMOS)
 	$(CC) -o $(APP) $(CMOS)
-
-mem.cmo: mem.ml lexer.cmo parser.cmo
-interpreter.cmo: mem.ml mem.cmo
-main.cmo: mem.ml mem.cmo
 
 lexer.ml: lexer.mll
 	$(LEX) lexer.mll
@@ -40,4 +37,8 @@ clean:
 veryclean: clean
 	rm -f $(APP)
 
+dep:
+	$(DEP) $(MLS) > .depend
+
+include .depend
 .PHONY: test clean veryclean
