@@ -32,9 +32,9 @@ exception NO_IDE						of string
 exception RESIDENT_EVIL					of string	(* Constant and Procedure don't have a residence cell in Store *)
 
 (* Not found exception *)
-exception NO_SUCH_ENV_ENTRY				of string	(* Environment entry not found *)
-exception NO_SUCH_STORE_ENTRY			of string	(* Store entry not found *)
-exception NO_SUCH_HEAP_ENTRY			of string	(* Heap entry not found *)
+exception Env_404			of string	(* Environment entry not found *)
+exception Store_404			of string	(* Store entry not found *)
+exception Heap_404			of string	(* Heap entry not found *)
 
 exception SYNTAX						of string
 exception INDEX_OUT_OF_BOUNDS			of string
@@ -92,6 +92,11 @@ let string_of_value (v:value) =
 		| StoreLoc(sl) -> 	"SLc["^(string_of_loc sl)^"]"
 		| HeapLoc(hl) -> 	"HLc["^(string_of_loc hl)^"]"
 
+(* Extract name form identifier *)
+let get_name (i:ide) =
+	match i with
+		  Ide(name) ->	name
+
 let check_loc (l:loc) (s:string) =
 	match l with 
 		  Null ->	raise (NULL_POINTER_EXCEPTION s)
@@ -130,7 +135,7 @@ class env size = object (self)
 	method get (i:ide) = (
 		let rec subget (tbl:(string * (ide,rentry) Hashtbl.t) list) (i:ide) = (
 			match tbl with
-				  [] ->				raise Not_found
+				  [] ->				raise (Env_404 ("env#get["^(get_name i)^"]"))
 				| (n,head)::tail ->	(try (Hashtbl.find head i)
 										with Not_found -> subget tail i)
 		) in subget rtbl i
@@ -244,7 +249,7 @@ class heap size = object (self)
 			let h = Hashtbl.find htbl l in
 				match h with
 					HEntry(_,v) ->	v
-		) with Not_found -> raise (NO_SUCH_HEAP_ENTRY ("heap#get["^(string_of_loc l)^"]"))
+		) with Not_found -> raise (Heap_404 ("heap#get["^(string_of_loc l)^"]"))
 	)
 	
 	method get_count (l:loc) = (
@@ -252,7 +257,7 @@ class heap size = object (self)
 			let h = Hashtbl.find htbl l in
 				match h with
 					HEntry(c,_) -> c
-		) with Not_found -> raise (NO_SUCH_HEAP_ENTRY ("heap#get_count["^(string_of_loc l)^"]"))
+		) with Not_found -> raise (Heap_404 ("heap#get_count["^(string_of_loc l)^"]"))
 	)
 	
 	method set (l:loc) (v:value) = (
@@ -300,7 +305,7 @@ class heap size = object (self)
 					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
 					  								self#bump_vec vl dim;
 					| _ ->						raise (MY_FAULT "do_bump")
-		) with Not_found ->	self#bump l
+		) with Env_404(s) ->	self#bump l
 	)
 	
 	(* Decrease counter for an HEntry: if 0, remove it *)
@@ -338,7 +343,7 @@ class heap size = object (self)
 						  								if self#sage_vec vl dim == 0
 						  									then r#remove id
 						| _ ->						raise (MY_FAULT "do_sage")
-			) with Not_found ->	ignore (self#sage l)
+			) with Env_404(s) ->	ignore (self#sage l)
 	)
 	
 	method free (l:loc) = (
@@ -365,7 +370,7 @@ class heap size = object (self)
 						  								r#remove id;			(* Destroy descriptor *)
 						  								self#free_vec vl dim	(* Free each cell *)
 						| _ ->						raise (MY_FAULT "do_free")
-			) with Not_found -> self#free l
+			) with Env_404(s) ->	self#free l
 	)
 	
 	method isfree (i:int) = (
