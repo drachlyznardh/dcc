@@ -72,10 +72,10 @@ let nextloc (l:loc) : loc =
 		  Loc(value) ->	Loc(value + 1)
 		| Null ->		raise (Null_pointer "nextloc")
 
-let moveloc (l:loc) (v:int) =
+let get_vo (l:loc) (off:int) =
 	match l with
-		  Loc(lv) ->	Loc(lv + v)
-		| Null ->		raise (Null_pointer "moveloc")
+		  Loc(lv) ->	Loc(lv - off)
+		| Null ->		raise (Null_pointer "get_vo")
 
 let print_loc (l:loc) =
 	match l with

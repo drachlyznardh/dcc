@@ -124,7 +124,7 @@ let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = (
 											decl_eval decls r s h
 										)
 		| Dec(x,Vector(t,lb,ub))::decls ->	let nl = s#newmem and dim = ub - lb + 1 in
-												let vo = moveloc nl lb in
+												let vo = get_vo nl lb in
 													(match t with
 														  Int ->	r#set x (Descr_Vctr(Int,lb,ub,vo));
 																	s#setvec (nl) dim (ValueInt(0));
@@ -165,10 +165,11 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 														HeapLoc(l)
 							| Vector(b,lb,ub) ->	let hm = 1 + ub - lb in
 														let fc = h#lnewmem hm in
-															let n = mkid fc in
+															let n = mkid fc
+															and vo = get_vo fc lb in
 															(* TODO fix virtual origin  *)
 																print_string ("\nMalloc("^(string_of_loc fc)^"/"^(get_name n)^")\n");
-																r#set n (Descr_Vctr(b,lb,ub,fc));
+																r#set n (Descr_Vctr(b,lb,ub,vo));
 																(match b with
 																	  Int ->	h#set_vec fc (ValueInt(0)) hm; 
 																	  			HeapLoc(fc)
