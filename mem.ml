@@ -125,6 +125,15 @@ class env size = object (self)
 		) in subget rtbl i
 	)
 	
+	(* Used to remove dynamic vector descriptors *)
+	method remove (i:ide) = (
+		let rec subremove (tbl:(string * (ide,rentry) Hashtbl.t) list) (i:ide) = (
+			match tbl with
+				  [] ->				()
+				| (n,head)::tail ->	Hashtbl.remove head i; subremove tail i
+		) in subremove rtbl i
+	)
+	
 	method get_bType (i:ide) = (
 		let re = self#get i in
 			match re with
@@ -313,7 +322,11 @@ class heap size = object (self)
 			let re = r#get (mkid l) in
 				match re with
 					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
-					  								ignore (self#sage_vec vl dim)
+					  								if self#sage_vec vl dim == 0 then (print_string "Vector free";
+					  								
+					  									r#remove (mkid l)
+					  								
+					  								)
 					| _ ->						raise (MY_FAULT "do_sage")
 		) with Not_found ->	ignore (self#sage l)
 	)
