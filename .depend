@@ -1,0 +1,12 @@
+syntaxtree.cmo: 
+syntaxtree.cmx: 
+parser.cmo: syntaxtree.cmo parser.cmi 
+parser.cmx: syntaxtree.cmx parser.cmi 
+lexer.cmo: parser.cmi 
+lexer.cmx: parser.cmx 
+mem.cmo: syntaxtree.cmo 
+mem.cmx: syntaxtree.cmx 
+interpreter.cmo: syntaxtree.cmo mem.cmo 
+interpreter.cmx: syntaxtree.cmx mem.cmx 
+main.cmo: syntaxtree.cmo parser.cmi lexer.cmo interpreter.cmo 
+main.cmx: syntaxtree.cmx parser.cmx lexer.cmx interpreter.cmx 
