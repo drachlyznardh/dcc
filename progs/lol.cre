@@ -1,21 +1,23 @@
 program
 
-	var a : array[35 .. 39] of int;
-
 	var x : ^^int;
 	var y : ^int;
 	var z : int;
 	
 begin
 
-	y := malloc(array[0 .. 19] of int);
+	y := malloc(int);
+	y := malloc(array[17 .. 19] of int);
 	x := @y;
 
-$	
-	y[0] := 14;
-	z := y[0];
+	write (y);
+	write (x);
+
+	y[18] := 14;
+	write (y[18]);
 	
-	write (a);
+	z := y[18];
+	
 	write (x);
 	write (y);
 
@@ -23,6 +25,5 @@ $
 
 	write (x);
 	write (y);
-$
 
 end
