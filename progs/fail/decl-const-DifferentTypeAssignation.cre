@@ -1,6 +1,6 @@
 program
 
-	const x:int := 1432.3;
+	const x:int := 1432.3;	$ Wrong type assignation $
 
 begin
 end

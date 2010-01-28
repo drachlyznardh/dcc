@@ -21,11 +21,11 @@ begin
 	write (x);
 	write (y);
 
-	free (^x);
+	free (^x);	$ Now destroy dynamic array $
 
-	write (x);
-	write (y);
+	write (x);	$ Pointer still works... $
+	write (y);	$ ... and pointer at pointer still works... $
 
-	write (y[18]);
+	write (y[18]);	$ ... but you can no longer refer to your array $
 
 end

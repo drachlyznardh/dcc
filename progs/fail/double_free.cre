@@ -6,7 +6,7 @@ program
 
 begin
 
-   p := malloc (int);
+   p := malloc (int);	$ Allocation $
    q := p;
 
    write(p);
@@ -17,12 +17,13 @@ begin
    
    write(x);
    
-   free(p);
+   free(p);				$ First deallocation, allowed $
+
    write(^p);
    write(p);
    write(^q);
    write(q);
    
-   free(q);
+   free(q);				$ Second deallocation, prohibited $
 
 end

@@ -4,12 +4,14 @@ program
 	var i : float;
 
 begin
-	for i := 4 to 9 do v[i] := i - 3;
 
-	i := 9;
+	for i := 4 to 9 do v[i] := i - 3;	$ Cannot assign int to float $
+
+	i := 9;	$ Cannot assing $
 
 	while (3 < i) do begin
 		write(v[i]);
 		i := i - 1;
 	end
+
 end

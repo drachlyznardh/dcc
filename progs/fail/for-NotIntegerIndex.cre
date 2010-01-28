@@ -4,7 +4,7 @@ program
 
 begin
 
-	for f := 0.0 to 1.0 do
+	for f := 0.0 to 1.0 do	$ Wrong index type $
 		write (f);
 
 end
