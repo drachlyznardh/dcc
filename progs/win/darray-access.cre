@@ -8,9 +8,9 @@ program
 begin
 
 	y := 0;
-	x := malloc (array[0 .. 7] of int); $ 8 little integer in my array... $
+	x := malloc (array[8 .. 15] of int); $ 8 little integer in my array... $
 	
-	for y := 0 to 7 do begin
+	for y := 8 to 15 do begin
 		if y % 2 = 0
 			then x[y] := y * 10 + 7;	$ Even elements get a power up! $
 			else x[y] := y;				$ Odd elements pass unchanged $
