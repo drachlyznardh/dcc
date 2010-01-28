@@ -300,11 +300,12 @@ class heap size = object (self)
 		) with Not_found -> raise (DOUBLE_FREE "heap#sage")
 	)
 	
-	method sage_vec (l:loc) (hm:int) = (
-		if hm > 0 then (
-			ignore (self#sage l);
-			self#sage_vec (nextloc l) (hm - 1);
-		)
+	method sage_vec (l:loc) (hm:int) :int = (
+		match hm with
+			  0 ->	-1
+			| 1 ->	self#sage l
+			| n ->	ignore (self#sage l);
+					self#sage_vec (nextloc l) (hm - 1)
 	)
 	
 	method do_sage (l:loc) (r:env) = (	
@@ -312,7 +313,7 @@ class heap size = object (self)
 			let re = r#get (mkid l) in
 				match re with
 					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
-					  								self#sage_vec vl dim
+					  								ignore (self#sage_vec vl dim)
 					| _ ->						raise (MY_FAULT "do_sage")
 		) with Not_found ->	ignore (self#sage l)
 	)
