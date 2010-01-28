@@ -4,6 +4,9 @@
 (*         (2009)Sconvolgimento(Ivan Simonini)       *)
 
 open Syntaxtree;;
+open Types;;
+open Exception;;
+open Common;;
 open Mem;;
 
 (******************************)
