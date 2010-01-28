@@ -26,4 +26,6 @@ begin
 	write (x);
 	write (y);
 
+	write (y[18]);
+
 end

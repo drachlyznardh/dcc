@@ -55,6 +55,7 @@ exception NOT_YET_IMPLEMENTED 			of string	(* LOL, still to be done... *)
 exception Not_a_pointer		of string	(* While calculating pointer's depth *)
 exception Null_pointer		of string	(* I herd you like Null *)
 exception Double_free		of string	(* Oh, so many times, always unexpected *)
+exception Segfault			of string	(* What are you pointing at? *)
 
 (* When it is really my fault, I admit it *)
 exception MY_FAULT						of string

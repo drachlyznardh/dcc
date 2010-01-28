@@ -176,21 +176,24 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 																);
 						)
 		| Vec(v,off) ->	let res = get_offset off r s h in
-							print_string ("\nEvaluating "^(get_name v)^"["^(string_of_int res)^"]\n");
+							print_string ("\nEvaluating "^"\n");
 							(match r#get v with
 								  Descr_Vctr(_,lb,ub,Loc(vo)) ->	if (res >= lb && res <= ub)
 												  						then s#get (Loc(vo + res))
 																		else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:I" )
 								| Descr_Pntr(_,_,l) ->
 									let home = get_loc (s#get l) in
-										let desc = r#get (mkid home) in
-											(match desc with
-												  Descr_Vctr(_,lb,ub,Loc(vo)) ->
-												  		if (res >= lb && res <= ub)
-												  			then h#get (Loc(vo + res))
-												  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")
-												| _ -> raise (MY_FAULT "Eval_aexp:Vec")
-											)
+										(try (
+											let desc = r#get (mkid home) in
+												(match desc with
+													  Descr_Vctr(_,lb,ub,Loc(vo)) ->
+													  		if (res >= lb && res <= ub)
+													  			then h#get (Loc(vo + res))
+													  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")
+													| _ -> raise (MY_FAULT "Eval_aexp:Vec")
+												)
+											) with Env_404(s) ->	raise (Segfault ((get_name v)^"["^(string_of_int res)^"]/"^s))
+										)
 							| _ -> raise (SYNTAX "Eval_aexp:Vec: That's no descriptor")
 						)
 		
@@ -294,26 +297,27 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 						  							| _ ->				()
 												);
 						  						set_value l ret s h;
-								| LVec(vid,off) ->
+								| LVec(v,off) ->
 										let res = get_offset off r s h in
-											print_string ("\n"^(get_name vid)^"["^(string_of_int res)^"]");
-											(match r#get vid with
+											(match r#get v with
 												  Descr_Vctr(_,lb,ub,Loc(vo)) ->
 												  		if (res >= lb && res <= ub)
 															then s#set (Loc(vo + res)) ret
 															else raise (INDEX_OUT_OF_BOUNDS "exec:Ass:LVec:I")
 												| Descr_Pntr(b,d,l) ->
-														print_string ("\nDescr("^(string_of_loc l)^")");
-														let sv = s#get l in print_string ("\nStore["^(string_of_loc l)^"]="^(string_of_value sv));
 														let home = get_loc (s#get l) in
-															let desc = r#get (mkid home) in
-																(match desc with
-																	  Descr_Vctr(_,lb,ub,Loc(vo)) ->
-																			if (res >= lb && res <= ub)
-																				then h#set (Loc(vo + res)) ret
-																				else raise (INDEX_OUT_OF_BOUNDS "Exec:Ass:LVec:II")
-																	| _ -> raise (MY_FAULT "Exec:Ass:LVec")
-																)
+															(try (
+																let desc = r#get (mkid home) in
+																	(match desc with
+																		  Descr_Vctr(_,lb,ub,Loc(vo)) ->
+																				if (res >= lb && res <= ub)
+																					then h#set (Loc(vo + res)) ret
+																					else raise (INDEX_OUT_OF_BOUNDS "Exec:Ass:LVec:II")
+																		| _ -> raise (MY_FAULT "Exec:Ass:LVec")
+																	)
+																) with Env_404(s) ->
+																	raise (Segfault ((get_name v)^"["^(string_of_int res)^"]/"^s))
+															)
 												| _ -> raise (SYNTAX "Exec:Ass:LVec: That's no descriptor")
 											)
 								| Lunref(u) ->
