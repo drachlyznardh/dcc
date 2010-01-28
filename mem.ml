@@ -36,9 +36,12 @@ exception Store_404			of string	(* Store entry not found *)
 exception Heap_404			of string	(* Heap entry not found *)
 
 exception SYNTAX						of string
+
+(* Indexes *)
 exception INDEX_OUT_OF_BOUNDS			of string
 exception NOT_INTEGER_INDEX				of string
 
+(* Do not mess with different types *)
 exception DIFFERENT_TYPE_OPERATION		of string
 exception DIFFERENT_TYPE_ASSIGNATION	of string
 exception DIFFERENT_TYPE_POINTER		of string
@@ -47,29 +50,32 @@ exception POINTER_ARITHMETIC			of string
 exception PARAMETERS_DO_NOT_MATCH		of string
 
 exception NOT_YET_IMPLEMENTED 			of string	(* LOL, still to be done... *)
-exception NOT_A_POINTER					of string	(* While calculating pointer's depth *)
-exception DEREF_ON_NOT_A_POINTER		of string	(* Are you dereferencing a pointer? Or maybe not? *)
-exception NULL_POINTER_EXCEPTION		of string
-exception DOUBLE_FREE					of string
-exception MY_FAULT						of string	(* Error due to interpreter malfunction *)
+
+(* Pointer exceptions *)
+exception Not_a_pointer		of string	(* While calculating pointer's depth *)
+exception Null_pointer		of string	(* I herd you like Null *)
+exception Double_free		of string	(* Oh, so many times, always unexpected *)
+
+(* When it is really my fault, I admit it *)
+exception MY_FAULT						of string
 
 (* Get location value from StoreLoc and HeapLoc *)
 let get_loc (v:value) : loc =
 	match v with
 		  StoreLoc(l) ->	l
 		| HeapLoc(l) ->		l
-		| _ ->				raise (NOT_A_POINTER "get_loc: not a location")
+		| _ ->				raise (Not_a_pointer "get_loc: not a location")
 
 (* Get next location *)
 let nextloc (l:loc) : loc = 
 	match l with
 		  Loc(value) ->	Loc(value + 1)
-		| Null ->		raise (NULL_POINTER_EXCEPTION "nextloc")
+		| Null ->		raise (Null_pointer "nextloc")
 
 let moveloc (l:loc) (v:int) =
 	match l with
 		  Loc(lv) ->	Loc(lv + v)
-		| Null ->		raise (NULL_POINTER_EXCEPTION "moveloc")
+		| Null ->		raise (Null_pointer "moveloc")
 
 let print_loc (l:loc) =
 	match l with
@@ -100,7 +106,7 @@ let get_name (i:ide) =
 
 let check_loc (l:loc) (s:string) =
 	match l with 
-		  Null ->	raise (NULL_POINTER_EXCEPTION s)
+		  Null ->	raise (Null_pointer s)
 		| Loc(_) ->	()
 
 (* Dynamic array names *)
@@ -109,7 +115,7 @@ let mkloc (i:ide) : loc = match i with
 
 let mkid (l:loc) : ide = match l with
 	  Loc(n) ->	Ide(string_of_int n)
-	| Null ->	raise (NULL_POINTER_EXCEPTION ("mkid"))
+	| Null ->	raise (Null_pointer ("mkid"))
 
 (* Heap class *)
 class env size = object (self)
@@ -324,7 +330,7 @@ class heap size = object (self)
 								nc
 						)
 			)
-		) with Not_found -> raise (DOUBLE_FREE "heap#sage")
+		) with Not_found -> raise (Double_free "heap#sage")
 	)
 	
 	method sage_vec (l:loc) (hm:int) :int = (
@@ -351,7 +357,7 @@ class heap size = object (self)
 		check_loc l "free";
 		try (
 			Hashtbl.remove htbl l
-		) with Not_found -> raise (DOUBLE_FREE "heap#free")
+		) with Not_found -> raise (Double_free "heap#free")
 	)
 	
 	method free_vec (l:loc) (hm:int) = (
@@ -416,7 +422,7 @@ class heap size = object (self)
 			print_string "\n\t\t";
 			match (l,h) with
 				  (Loc(lv),HEntry(c,v)) ->	print_string ((string_of_int lv)^":"^(string_of_int c)^":"^(string_of_value v))
-				| (Null,_) ->				raise (NULL_POINTER_EXCEPTION "Heap#show")
+				| (Null,_) ->				raise (Null_pointer "Heap#show")
 		) in
 			print_string "\nHeap:";
 			let length = Hashtbl.length htbl in

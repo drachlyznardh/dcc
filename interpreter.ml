@@ -43,7 +43,7 @@ let pntr_get_data (p:dexp) (r:env) : (bType * value * int) =
 		  											)
 		  					| Descr_Pntr(b,_,l) ->	(b,StoreLoc(l),1)
 		  					| _ ->					(match id with 
-		  												  Ide(name) ->	raise (NOT_A_POINTER ("pntr_get_data["^name^"]")))
+		  												  Ide(name) ->	raise (Not_a_pointer ("pntr_get_data["^name^"]")))
 		  				)
 		| Munref(next) -> let (b,v,d) = aux next r in (b,v,d+1)
 	in aux p r
