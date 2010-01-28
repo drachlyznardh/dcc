@@ -1,0 +1,18 @@
+program
+
+	var x : array[8 .. 15] of int;
+	var y : int;
+
+begin
+
+	y := 0;
+	
+	for y := 8 to 15 do begin
+		if y % 2 = 0
+			then x[y] := y * 10 + 7;	$ Even elements get a power up! $
+			else x[y] := y;				$ Odd elements pass unchanged $
+	end
+	
+	for y := 8 to 15 do write (x[y]);	$ Write down everthing $
+
+end

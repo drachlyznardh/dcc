@@ -168,7 +168,6 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 															let n = mkid fc
 															and vo = get_vo fc lb in
 															(* TODO fix virtual origin  *)
-																print_string ("\nMalloc("^(string_of_loc fc)^"/"^(get_name n)^")\n");
 																r#set n (Descr_Vctr(b,lb,ub,vo));
 																(match b with
 																	  Int ->	h#set_vec fc (ValueInt(0)) hm; 
@@ -188,7 +187,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 											  Descr_Vctr(_,lb,ub,Loc(vo)) ->
 											  		if (res >= lb && res <= ub)
 											  			then h#get (Loc(vo + res))
-											  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")							
+											  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")
 											| _ -> raise (MY_FAULT "Eval_aexp:Vec")
 										)
 							| _ -> raise (SYNTAX "Eval_aexp:Vec: That's no descriptor")

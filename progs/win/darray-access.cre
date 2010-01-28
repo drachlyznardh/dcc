@@ -16,7 +16,7 @@ begin
 			else x[y] := y;				$ Odd elements pass unchanged $
 	end
 	
-	for y := 0 to 7 do write (x[y]);	$ Write down everthing $
+	for y := 8 to 15 do write (x[y]);	$ Write down everthing $
 
 	f := 156354.4;
 	g := 36783.24;

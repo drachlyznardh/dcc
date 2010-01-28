@@ -1,0 +1,28 @@
+program
+
+	var a : array[35 .. 39] of int;
+
+	var x : ^^int;
+	var y : ^int;
+	var z : int;
+	
+begin
+
+	y := malloc(array[0 .. 19] of int);
+	x := @y;
+
+$	
+	y[0] := 14;
+	z := y[0];
+	
+	write (a);
+	write (x);
+	write (y);
+
+	free (^x);
+
+	write (x);
+	write (y);
+$
+
+end
