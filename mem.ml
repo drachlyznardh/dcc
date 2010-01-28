@@ -6,10 +6,10 @@ type loc =
 	| Null							(* No location *)
 
 type value =
-      ValueInt of int				(* Type integer with value *)
-    | ValueFloat of float			(* Type float with value *)
-    | StoreLoc of loc				(* Location in the Store space *)
-    | HeapLoc of loc				(* Location in the Heap space *)
+      ValueInt		of int				(* Type integer with value *)
+    | ValueFloat	of float			(* Type float with value *)
+    | StoreLoc		of loc				(* Location in the Store space *)
+    | HeapLoc		of loc				(* Location in the Heap space *)
 
 type rentry =
 	  Var of bType * loc			(* Variabile with type and residence *)
@@ -117,13 +117,13 @@ class env size = object (self)
 	
 	method pop = (
 		match rtbl with
-			  [] ->				();
+			  [] ->				raise (MY_FAULT "env#pop: No base table")
 			| (n,head)::tail ->	Hashtbl.clear head; rtbl <- tail
 	)
 	
 	method set (i:ide) (r:rentry) = (
 		match rtbl with
-			  [] ->				raise (NO_IDE "env#set")
+			  [] ->				raise (MY_FAULT "env#set: No base table")
 			| (n,head)::tail ->	Hashtbl.replace head i r; (*self#show*)
 	)
 	
