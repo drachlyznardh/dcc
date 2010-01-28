@@ -130,7 +130,8 @@ class env size = object (self)
 		let rec subremove (tbl:(string * (ide,rentry) Hashtbl.t) list) (i:ide) = (
 			match tbl with
 				  [] ->				()
-				| (n,head)::tail ->	Hashtbl.remove head i; subremove tail i
+				| (n,head)::tail ->	Hashtbl.remove head i;	(* Remove the descriptor, if exists *)
+									subremove tail i		(* Try to remove from the any higher scope *)
 		) in subremove rtbl i
 	)
 	
@@ -317,18 +318,16 @@ class heap size = object (self)
 					self#sage_vec (nextloc l) (hm - 1)
 	)
 	
-	method do_sage (l:loc) (r:env) = (	
-		try (
-			let re = r#get (mkid l) in
-				match re with
-					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
-					  								if self#sage_vec vl dim == 0 then (print_string "Vector free";
-					  								
-					  									r#remove (mkid l)
-					  								
-					  								)
-					| _ ->						raise (MY_FAULT "do_sage")
-		) with Not_found ->	ignore (self#sage l)
+	method do_sage (l:loc) (r:env) = (
+		let id = mkid l in
+			try (
+				let re = r#get id in
+					match re with
+						  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
+						  								if self#sage_vec vl dim == 0
+						  									then r#remove id
+						| _ ->						raise (MY_FAULT "do_sage")
+			) with Not_found ->	ignore (self#sage l)
 	)
 	
 	method free (l:loc) = (
@@ -336,6 +335,26 @@ class heap size = object (self)
 		try (
 			Hashtbl.remove htbl l
 		) with Not_found -> raise (DOUBLE_FREE "heap#free")
+	)
+	
+	method free_vec (l:loc) (hm:int) = (
+		if hm > 0 then (
+			self#free l;
+			self#free_vec (nextloc l) (hm - 1)
+		)
+	)
+	
+	method do_free (l:loc) (r:env) = (
+		check_loc l "do_free";
+		let id = mkid l in
+			try (
+				let re = r#get id in
+					match re with
+						  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
+						  								r#remove id;
+						  								self#free_vec vl dim
+						| _ ->						raise (MY_FAULT "do_free")
+			) with Not_found -> ()
 	)
 	
 	method isfree (i:int) = (
