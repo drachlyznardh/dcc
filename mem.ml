@@ -283,22 +283,27 @@ class heap size = object (self)
 	)
 	
 	(* Decrease counter for an HEntry: if 0, remove it *)
-	method sage (l:loc) = (
+	method sage (l:loc):int = (
 		check_loc l "sage";
 		try (
 			let h = Hashtbl.find htbl l in (
 				match h with
 					HEntry(c,v) ->
-						if c == 1 then Hashtbl.remove htbl l
-						else Hashtbl.replace htbl l (HEntry(c - 1,v))
+						if c == 1 then (
+							Hashtbl.remove htbl l; 0						(* Remove entry, deallocation *)
+						) else (
+							let nc = c - 1 in
+								Hashtbl.replace htbl l (HEntry(c - 1,v));	(* Decrease counter *)
+								nc
+						)
 			)
 		) with Not_found -> raise (DOUBLE_FREE "heap#sage")
 	)
 	
 	method sage_vec (l:loc) (hm:int) = (
 		if hm > 0 then (
-			self#sage l;
-			self#sage_vec (nextloc l) (hm - 1)
+			ignore (self#sage l);
+			self#sage_vec (nextloc l) (hm - 1);
 		)
 	)
 	
@@ -309,7 +314,7 @@ class heap size = object (self)
 					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
 					  								self#sage_vec vl dim
 					| _ ->						raise (MY_FAULT "do_sage")
-		) with Not_found ->	self#sage l
+		) with Not_found ->	ignore (self#sage l)
 	)
 	
 	method free (l:loc) = (
