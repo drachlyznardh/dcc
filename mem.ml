@@ -394,19 +394,19 @@ class heap size = object (self)
 	)
 	
 	method arefree (f:int) (left:int) = (
-		if self#isfree f then
-			if left == 0 then
-				(true, f)							(* Done: this cell is the last one *)
-			else
-				self#arefree (f + 1) (left - 1)		(* Keep on looking on next cell *)
+		if self#isfree f
+			then if left == 0
+				then (true, f)							(* Done: this cell is the last one *)
+				else self#arefree (f + 1) (left - 1)	(* Keep on looking on next cell *)
 		else (false, f+1)
 	)
 
 	method newmem :loc = (
-		let rec keepsearching (n:int) =
-			if self#isfree n then Loc(n)
-			else keepsearching (n + 1)
-		in keepsearching 0
+		let rec keepsearching (n:int) = (
+			if self#isfree n
+				then Loc(n)
+				else keepsearching (n + 1)
+		) in keepsearching 0
 	)
 
 	method lnewmem (hm:int) :loc = (
