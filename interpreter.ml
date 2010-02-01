@@ -45,7 +45,7 @@ let pntr_get_data (p:dexp) (r:env) : (bType * value * int) =
 		  					| Val(v) ->				(match v with
 		  												  ValueInt(_) ->	(Int,v,1)
 		  												| ValueFloat(_) ->	(Float,v,1)
-		  												| _ ->				raise (MY_FAULT "pntr_get_data")
+		  												| _ ->				raise (My_fault "pntr_get_data")
 		  											)
 		  					| Descr_Pntr(b,_,l) ->	(b,StoreLoc(l),1)
 		  					| _ ->					(match id with 
@@ -63,6 +63,12 @@ let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value =
 		| ValueInt(v) ->	raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
 		| ValueFloat(v) ->	raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
+let rec deref_until_value (v:value) (s:store) (h:heap) : value = 
+	match v with
+		  StoreLoc(l) ->	deref_until_value (s#get l) s h
+		| HeapLoc(l) ->		deref_until_value (h#get l) s h
+		| v ->				v
+
 (* Where is this identifier's value saved? *)
 let get_residence (i:ide) (r:env) :value =
 	match r#get i with
@@ -76,13 +82,13 @@ let get_residence_vec (i:ide) (off:int) (r:env) :value =
 	match r#get i with
 		  Descr_Vctr(_,lb,ub,Loc(l)) ->	let real = l - lb + off in
 		  									StoreLoc(Loc(real))
-		| _ ->							raise (MY_FAULT "get_residence_vec")
+		| _ ->							raise (My_fault "get_residence_vec")
 
 (* I need THAT value, I don't mind where is it saved. *)
 let get_value (l:value) (s:store) (h:heap) :value = match l with
 	  StoreLoc(sl) ->	s#get sl
 	| HeapLoc(hl) ->	h#get hl
-	| _ -> raise (MY_FAULT "get_value")
+	| _ -> raise (My_fault "get_value")
 
 (* I need something to get changed: do it and don't bother me *)
 let set_value (l:value) (v:value) (s:store) (h:heap) = 
@@ -90,13 +96,29 @@ let set_value (l:value) (v:value) (s:store) (h:heap) =
 	match l with
 	  StoreLoc(sl) ->	s#set sl v
 	| HeapLoc(hl) ->	h#set hl v
-	| _ -> raise (MY_FAULT "set_value")
+	| _ -> raise (My_fault "set_value")
 
-let get_bType (l:lexp) (r:env) : bType =
+let value_get_bType (v:value) = 
+	match v with
+		  ValueInt(_) ->	Int
+		| ValueFloat(_) ->	Float
+		| _ ->				raise (My_fault "value_get_type")
+
+let lexp_get_bType (l:lexp) (r:env) : (bType * bType) =
 	match l with
-		  LVar(id)  ->		r#get_bType id
-		| LVec(vid,_) ->	r#get_bType vid
-		| Lunref(u) ->		let (b,_,_) = pntr_get_data u r in b
+		  LVar(id)  ->		let t = r#get_bType id in t,t
+		| LVec(vid,_) ->	let t = r#get_bType vid in t,t
+		| Lunref(u) ->		let (b,_,_) = pntr_get_data u r in b, Int
+
+let get_final_bType (i:ide) (r:env) (s:store) (h:heap) = (
+	let re = r#get i in
+		match re with
+			  Var(b,_) ->				b
+			| Val(v) ->					value_get_bType v
+			| Descr_Pntr(_,_,l) ->		value_get_bType (deref_until_value (StoreLoc(l)) s h)
+			| Descr_Vctr(_,_,_,l) ->	value_get_bType (deref_until_value (StoreLoc(l)) s h)
+			| Descr_Prcd(_) ->			raise (My_fault "get_bType")
+)
 
 (** END OF FUFFA **)
 
@@ -196,7 +218,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 													  		if (res >= lb && res <= ub)
 													  			then h#get (Loc(vo + res))
 													  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")
-													| _ -> raise (MY_FAULT "Eval_aexp:Vec")
+													| _ -> raise (My_fault "Eval_aexp:Vec")
 												)
 											) with Env_404(s) ->	raise (Segfault ((get_name v)^"["^(string_of_int res)^"]/"^s))
 										)
@@ -280,17 +302,19 @@ let rec assign_values (f:param list) (a:value list) (r:env) (s:store) (h:heap) =
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
       Ass(i,e) ->		let ret = eval_aexp e r s h
-      						and b = get_bType i r
+      						and (b,fl) = lexp_get_bType i r in
+	      						let fr = value_get_bType (deref_until_value ret s h)
       					in
 							(match ret,b with
 								  ValueInt(_),Int ->		()
 								| ValueFloat(_),Float ->	()
-								| StoreLoc(_),loc ->		()
-								| HeapLoc(_),loc ->			()
+								| StoreLoc(l),loc ->		()
+								| HeapLoc(l),loc ->			()
 								| f,s ->					raise (DIFFERENT_TYPE_OPERATION "Exec:Ass")
 							);
 							(match i with
-								  LVar(id)  ->	let l = get_residence id r in
+								  LVar(id)  ->
+								  		let l = get_residence id r in
 					  						let oldv = get_value l s h in
 												(* Now check for SAGE *)
 												(match oldv with
@@ -319,7 +343,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 																				if (res >= lb && res <= ub)
 																					then h#set (Loc(vo + res)) ret
 																					else raise (INDEX_OUT_OF_BOUNDS "Exec:Ass:LVec:II")
-																		| _ -> raise (MY_FAULT "Exec:Ass:LVec")
+																		| _ -> raise (My_fault "Exec:Ass:LVec")
 																	)
 																) with Env_404(s) ->
 																	raise (Segfault ((get_name v)^"["^(string_of_int res)^"]/"^s))

@@ -29,5 +29,5 @@ exception Double_free		of string	(* Oh, so many times, always unexpected *)
 exception Segfault			of string	(* What are you pointing at? *)
 
 (* When it is really my fault, I admit it *)
-exception MY_FAULT						of string
+exception My_fault						of string
 

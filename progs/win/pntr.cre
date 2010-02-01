@@ -1,6 +1,7 @@
 program
 
    var x : float;
+
    var y : int;
    var z : int;
    var p : ^int;
@@ -11,6 +12,8 @@ begin
 
    x := 404.03456789;
    p := @x;
+   q := @p;
+   r := @q;
 
    write(x);
    write(y);

@@ -72,7 +72,7 @@ class heap size = object (self)
 				match re with
 					  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
 					  								self#bump_vec vl dim;
-					| _ ->						raise (MY_FAULT "do_bump")
+					| _ ->						raise (My_fault "do_bump")
 		) with Env_404(s) ->	self#bump l
 	)
 	
@@ -110,7 +110,7 @@ class heap size = object (self)
 						  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
 						  								if self#sage_vec vl dim == 0
 						  									then r#remove id
-						| _ ->						raise (MY_FAULT "do_sage")
+						| _ ->						raise (My_fault "do_sage")
 			) with Env_404(s) ->	ignore (self#sage l)
 	)
 	
@@ -137,7 +137,7 @@ class heap size = object (self)
 						  Descr_Vctr(b,lb,ub,vl) ->	let dim = ub - lb + 1 in
 						  								r#remove id;			(* Destroy descriptor *)
 						  								self#free_vec vl dim	(* Free each cell *)
-						| _ ->						raise (MY_FAULT "do_free")
+						| _ ->						raise (My_fault "do_free")
 			) with Env_404(s) ->	self#free l
 	)
 	

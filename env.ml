@@ -15,13 +15,13 @@ class env size = object (self)
 	
 	method pop = (
 		match rtbl with
-			  [] ->				raise (MY_FAULT "env#pop: No base table")
+			  [] ->				raise (My_fault "env#pop: No base table")
 			| (n,head)::tail ->	Hashtbl.clear head; rtbl <- tail
 	)
 	
 	method set (i:ide) (r:rentry) = (
 		match rtbl with
-			  [] ->				raise (MY_FAULT "env#set: No base table")
+			  [] ->				raise (My_fault "env#set: No base table")
 			| (n,head)::tail ->	Hashtbl.replace head i r; (*self#show*)
 	)
 	
@@ -51,11 +51,11 @@ class env size = object (self)
 				| Val(v) ->					(match v with
 	  											  ValueInt(_) ->	Int
 	  											| ValueFloat(_) ->	Float
-	  											| _ ->				raise (MY_FAULT "get_bType: const")
+	  											| _ ->				raise (My_fault "env#get_bType: const")
 	  										)
 				| Descr_Pntr(b,_,_) ->		b
 				| Descr_Vctr(b,_,_,_) ->	b
-				| Descr_Prcd(_) ->			raise (MY_FAULT "get_bType")
+				| Descr_Prcd(_) ->			raise (My_fault "get_bType")
 	)
 
 	method show = (
