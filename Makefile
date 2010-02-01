@@ -1,4 +1,6 @@
 
+ARG  := $2
+
 YACC := ocamlyacc
 LEX  := ocamllex
 CC   := ocamlc
@@ -22,9 +24,6 @@ lexer.ml: lexer.mll
 parser.ml: parser.mly
 	$(YACC) parser.mly
 	$(CC) -c parser.mli
-
-run: 
-	./$(APP) < progs/win/darray-access.cre
 
 runall:
 	for i in $$(find . -name '*.cre'); do echo "\nNow executing $$i"; ./$(APP) < $$i; done
