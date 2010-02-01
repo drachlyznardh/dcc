@@ -38,20 +38,20 @@ let pntr_bType (p:pType) : bType =
 	in aux p
 	
 (* Get final identifier name from a pointer *)
-let pntr_get_data (p:dexp) (r:env) : (bType * value * int) =
+let pntr_get_data (p:dexp) (r:env) : (bType * ide * value * int) =
 	let rec aux (p:dexp) (r:env) = match p with
 		  Sunref(id) -> (match r#get id with
-		  					  Var(b,l) ->			(b,StoreLoc(l), 1)
+		  					  Var(b,l) ->			(b,id,StoreLoc(l), 1)
 		  					| Val(v) ->				(match v with
-		  												  ValueInt(_) ->	(Int,v,1)
-		  												| ValueFloat(_) ->	(Float,v,1)
+		  												  ValueInt(_) ->	(Int,id,v,1)
+		  												| ValueFloat(_) ->	(Float,id,v,1)
 		  												| _ ->				raise (My_fault "pntr_get_data")
 		  											)
-		  					| Descr_Pntr(b,_,l) ->	(b,StoreLoc(l),1)
+		  					| Descr_Pntr(b,_,l) ->	(b,id,StoreLoc(l),1)
 		  					| _ ->					(match id with 
 		  												  Ide(name) ->	raise (Not_a_pointer ("pntr_get_data["^name^"]")))
 		  				)
-		| Munref(next) -> let (b,v,d) = aux next r in (b,v,d+1)
+		| Munref(next) -> let (b,i,v,d) = aux next r in (b,i,v,d+1)
 	in aux p r
 	
 let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value = 
@@ -60,13 +60,13 @@ let rec do_deref (depth:int) (v:value) (s:store) (h:heap) : value =
 	else match v with
 		  StoreLoc(l) ->	do_deref (depth - 1) (s#get l) s h
 		| HeapLoc(l) ->		do_deref (depth - 1) (h#get l) s h
-		| ValueInt(v) ->	raise (SYNTAX ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
-		| ValueFloat(v) ->	raise (SYNTAX ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
+		| ValueInt(v) ->	raise (Syntax ("Do_deref_value: ValueInt("^(string_of_int v)^")is not a ValueLoc"))
+		| ValueFloat(v) ->	raise (Syntax ("Do_deref_value: ValueFloat("^(string_of_float v)^") is not a ValueLoc"))
 
 let rec deref_until_value (v:value) (s:store) (h:heap) : value = 
 	match v with
-		  StoreLoc(l) ->	deref_until_value (s#get l) s h
-		| HeapLoc(l) ->		deref_until_value (h#get l) s h
+		  StoreLoc(l) ->	print_string ("\nSearching in store for "^(string_of_loc l)); s#show; deref_until_value (s#get l) s h
+		| HeapLoc(l) ->		print_string ("\nSearching in heap for "^(string_of_loc l)); h#show; deref_until_value (h#get l) s h
 		| v ->				v
 
 (* Where is this identifier's value saved? *)
@@ -104,19 +104,19 @@ let value_get_bType (v:value) =
 		| ValueFloat(_) ->	Float
 		| _ ->				raise (My_fault "value_get_type")
 
-let lexp_get_bType (l:lexp) (r:env) : (bType * bType) =
+let lexp_get_bType (l:lexp) (r:env) : bType =
 	match l with
-		  LVar(id)  ->		let t = r#get_bType id in t,t
-		| LVec(vid,_) ->	let t = r#get_bType vid in t,t
-		| Lunref(u) ->		let (b,_,_) = pntr_get_data u r in b, Int
+		  LVar(id)  ->		r#get_bType id
+		| LVec(vid,_) ->	r#get_bType vid
+		| Lunref(u) ->		let (b,_,_,_) = pntr_get_data u r in b
 
 let get_final_bType (i:ide) (r:env) (s:store) (h:heap) = (
 	let re = r#get i in
 		match re with
 			  Var(b,_) ->				b
 			| Val(v) ->					value_get_bType v
-			| Descr_Pntr(_,_,l) ->		value_get_bType (deref_until_value (StoreLoc(l)) s h)
-			| Descr_Vctr(_,_,_,l) ->	value_get_bType (deref_until_value (StoreLoc(l)) s h)
+			| Descr_Pntr(b,_,l) ->		b(*value_get_bType (deref_until_value (StoreLoc(l)) s h)*)
+			| Descr_Vctr(b,_,_,l) ->	b(*value_get_bType (deref_until_value (StoreLoc(l)) s h)*)
 			| Descr_Prcd(_) ->			raise (My_fault "get_bType")
 )
 
@@ -141,7 +141,7 @@ let rec decl_eval (d:dec list) (r:env) (s: store) (h:heap) = (
 																			decl_eval decls r s h
 												| (Float,ValueFloat(fv)) ->	r#set x (Val(ValueFloat(fv)));
 																			decl_eval decls r s h
-												| (_,_) ->					raise (DIFFERENT_TYPE_ASSIGNATION "decl_eval:Const")
+												| (_,_) ->					raise (Different_type_assignation "decl_eval:Const")
 											)
 		| Dec(x,Pointer(p))::decls ->	let nl = s#newmem
 											and depth = pntr_depth p
@@ -172,10 +172,10 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 							| Val(v) ->				v
 							| Descr_Pntr(_,_,l) ->	s#get l
 							| _ ->					(match i with 
-														Ide(name) -> raise (SYNTAX ("Eval_aexp:Ident: Id not found("^name^")") )
+														Ide(name) -> raise (Syntax ("Eval_aexp:Ident: Id not found("^name^")") )
 													)
 		                )
-		| Unref(p)  ->	let (_,l,d) = (pntr_get_data p r) in	(* First I get the unreference last location *)
+		| Unref(p)  ->	let (_,_,l,d) = (pntr_get_data p r) in	(* First I get the unreference last location *)
 							do_deref (d + 1) l s h				(* Then I get that final location stored value *)
 		| Ref(i)    ->	get_residence i r
 		| Malloc(t) ->	(match t with
@@ -185,7 +185,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 															| Float -> h#set l (ValueFloat(0.0));
 														);
 														HeapLoc(l)
-							| Const(_,_) ->			raise (SYNTAX "You don't want to declare dynamic constant, do you?")
+							| Const(_,_) ->			raise (Syntax "You don't want to declare dynamic constant, do you?")
 							| Pointer(p) ->			let l = h#newmem in
 														(match p with 
 															_ -> h#set l (HeapLoc(Null))
@@ -208,7 +208,7 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 							(match r#get v with
 								  Descr_Vctr(_,lb,ub,Loc(vo)) ->	if (res >= lb && res <= ub)
 												  						then s#get (Loc(vo + res))
-																		else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:I" )
+																		else raise (Index_out_of_bounds "Eval_aexp:Vec:I" )
 								| Descr_Pntr(_,_,l) ->
 									let home = get_loc (s#get l) in
 										(try (
@@ -217,12 +217,12 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 													  Descr_Vctr(_,lb,ub,Loc(vo)) ->
 													  		if (res >= lb && res <= ub)
 													  			then h#get (Loc(vo + res))
-													  			else raise (INDEX_OUT_OF_BOUNDS "Eval_aexp:Vec:II")
+													  			else raise (Index_out_of_bounds "Eval_aexp:Vec:II")
 													| _ -> raise (My_fault "Eval_aexp:Vec")
 												)
 											) with Env_404(s) ->	raise (Segfault ((get_name v)^"["^(string_of_int res)^"]/"^s))
 										)
-							| _ -> raise (SYNTAX "Eval_aexp:Vec: That's no descriptor")
+							| _ -> raise (Syntax "Eval_aexp:Vec: That's no descriptor")
 						)
 		
 		| Sum (a,b) ->	aexp_op_fun a b r s h (+) (+.)
@@ -236,16 +236,16 @@ and eval_aexp (e:aexp) (r:env) (s:store) (h:heap): value = (
 		(match aValue,bValue with 
 			  ValueInt(op1),ValueInt(op2) ->		ValueInt(fi op1 op2)
 			| ValueFloat(op1),ValueFloat(op2) ->	ValueFloat(fr op1 op2)
-			| ValueInt(_),ValueFloat(_) ->			raise (DIFFERENT_TYPE_OPERATION "aexp_op_fun:I")
-			| ValueFloat(_),ValueInt(_) ->			raise (DIFFERENT_TYPE_OPERATION "aexp_op_fun:II")
-			| _,_ ->								raise (POINTER_ARITHMETIC "aexp_op_fun")
+			| ValueInt(_),ValueFloat(_) ->			raise (Different_type_operation "aexp_op_fun:I")
+			| ValueFloat(_),ValueInt(_) ->			raise (Different_type_operation "aexp_op_fun:II")
+			| _,_ ->								raise (Pointer_arithmetic "aexp_op_fun")
 		)
 
 ) and get_offset (e:aexp) (r:env) (s:store) (h:heap) :int = (
 	let res = eval_aexp e r s h in
 		match res with
 			  ValueInt(off) ->	off
-			| _ ->				raise (NOT_INTEGER_INDEX "get_offset")
+			| _ ->				raise (Not_integer_index "get_offset")
 )
 
 let rec eval_bexp (e:bexp) (r:env) (s:store) (h:heap) = match e with
@@ -279,10 +279,10 @@ let type_check (input_values:value list) (parameters:param list) =
 	            	(match v,t with
 						  ValueInt(_),Int ->		do_check acts forms
 						| ValueFloat(_),Float ->	do_check acts forms
-						| _,Int ->					raise (PARAMETERS_DO_NOT_MATCH "type_check:should be int")
-						| _,Float ->				raise (PARAMETERS_DO_NOT_MATCH "type_check:should be float")
+						| _,Int ->					raise (Parameters_do_not_match "type_check:should be int")
+						| _,Float ->				raise (Parameters_do_not_match "type_check:should be float")
 					)
-            | _ ->							raise (SYNTAX "Type_checking: error")
+            | _ ->							raise (Syntax "Type_checking: error")
     in
         if (List.length(input_values) != List.length(parameters))
             then false
@@ -295,14 +295,21 @@ let rec assign_values (f:param list) (a:value list) (r:env) (s:store) (h:heap) =
         								assign_values fs acts r s h;
 										(match r#get id with
 											Var(_,l) ->	s#set l v
-											| _ ->		raise (SYNTAX "Assign_values: Not a Variable")
+											| _ ->		raise (Syntax "Assign_values: Not a Variable")
 										)
-        | _ -> raise (SYNTAX "Assign_values: Not a list")
+        | _ -> raise (Syntax "Assign_values: Not a list")
+
+let check_same_bType (first:bType) (second:bType) =
+	match first,second with
+		  Int,Int ->		true
+		| Float,Float ->	true
+		| Int,Float ->		raise (Different_type_assignation "check_same_bType: Int<-Float")
+		| Float,Int ->		raise (Different_type_assignation "check_same_bType: Float<-Int")
 
 (* execution of commands *)
 let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
       Ass(i,e) ->		let ret = eval_aexp e r s h
-      						and (b,fl) = lexp_get_bType i r in
+      						and b = lexp_get_bType i r in
 	      						let fr = value_get_bType (deref_until_value ret s h)
       					in
 							(match ret,b with
@@ -310,10 +317,12 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 								| ValueFloat(_),Float ->	()
 								| StoreLoc(l),loc ->		()
 								| HeapLoc(l),loc ->			()
-								| f,s ->					raise (DIFFERENT_TYPE_OPERATION "Exec:Ass")
+								| f,s ->					raise (Different_type_assignation "Exec:Ass:I")
 							);
 							(match i with
 								  LVar(id)  ->
+      									let fl = r#get_bType id in
+		  									ignore (check_same_bType fl fr);
 								  		let l = get_residence id r in
 					  						let oldv = get_value l s h in
 												(* Now check for SAGE *)
@@ -328,12 +337,14 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 												);
 						  						set_value l ret s h;
 								| LVec(v,off) ->
+      									let fl = r#get_bType v in
+		  									ignore (check_same_bType fl fr);
 										let res = get_offset off r s h in
 											(match r#get v with
 												  Descr_Vctr(_,lb,ub,Loc(vo)) ->
 												  		if (res >= lb && res <= ub)
 															then s#set (Loc(vo + res)) ret
-															else raise (INDEX_OUT_OF_BOUNDS "exec:Ass:LVec:I")
+															else raise (Index_out_of_bounds "exec:Ass:LVec:I")
 												| Descr_Pntr(b,d,l) ->
 														let home = get_loc (s#get l) in
 															(try (
@@ -342,16 +353,18 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 																		  Descr_Vctr(_,lb,ub,Loc(vo)) ->
 																				if (res >= lb && res <= ub)
 																					then h#set (Loc(vo + res)) ret
-																					else raise (INDEX_OUT_OF_BOUNDS "Exec:Ass:LVec:II")
+																					else raise (Index_out_of_bounds "Exec:Ass:LVec:II")
 																		| _ -> raise (My_fault "Exec:Ass:LVec")
 																	)
 																) with Env_404(s) ->
 																	raise (Segfault ((get_name v)^"["^(string_of_int res)^"]/"^s))
 															)
-												| _ -> raise (SYNTAX "Exec:Ass:LVec: That's no descriptor")
+												| _ -> raise (Syntax "Exec:Ass:LVec: That's no descriptor")
 											)
 								| Lunref(u) ->
-										let (_,l,d) = pntr_get_data u r in
+										let (_,id,l,d) = pntr_get_data u r in
+		  									let fl = r#get_bType id in
+			  									ignore (check_same_bType fl fr);
 											set_value (do_deref d l s h) ret s h
                         	)
     | Blk([]) ->		()
@@ -364,7 +377,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 						let min = eval_aexp minexp r s h
                         	and update_counter l s = (match (s#get l) with
 								  ValueInt(n) ->	s#set l (ValueInt(n + 1))
-								| _ ->				raise (NOT_INTEGER_INDEX "Exec:For:update_counter")
+								| _ ->				raise (Not_integer_index "Exec:For:update_counter")
 							) in 
 							(match r#get i with
 								  Var(_,l) ->	(s#set l min;											(* Assign min value to counter *)
@@ -376,7 +389,7 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 													)
 												) in exec_for s											(* Starting from the beginning *)
 												)
-								| _ ->			raise (SYNTAX "Exec(For): Not a Variable")
+								| _ ->			raise (Syntax "Exec(For): Not a Variable")
 							)
     | Repeat(c,b)   ->  exec c r s h;						(* Execute body command once, then ... *)
 						if (not(eval_bexp b r s h))			(* ... until the condition is satisfied ... *)
@@ -394,8 +407,8 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 							  Descr_Prcd(params,locals,cmds) ->
 									if ((type_check input_values params))
 										then exec_proc id input_values r s h
-										else raise (PARAMETERS_DO_NOT_MATCH "Exec:PCall")
-							| _ ->	raise (SYNTAX "Exec(Pcall): Not a Descr_Procedure")
+										else raise (Parameters_do_not_match "Exec:PCall")
+							| _ ->	raise (Syntax "Exec(Pcall): Not a Descr_Procedure")
 						)
 	| Free(p) ->		(let lookforloc (p:lexp) :value = (
 							match p with
@@ -403,14 +416,14 @@ let rec exec (c: cmd) (r: env) (s: store) (h:heap) = match c with
 								| LVec(id,aexp) ->	(let off = (eval_aexp aexp r s h) in
 														match off with
 															  ValueInt(v) ->	get_value (get_residence_vec id v r) s h
-															| _ ->				raise (INDEX_OUT_OF_BOUNDS "Exec:Free")
+															| _ ->				raise (Index_out_of_bounds "Exec:Free")
 													)
-								| Lunref(u) ->		let (_,l,d) = pntr_get_data u r in
+								| Lunref(u) ->		let (_,_,l,d) = pntr_get_data u r in
 														get_value (do_deref d l s h) s h
 							) in let d = lookforloc p in 
 								match d with
 									  HeapLoc(l) ->	h#do_free l r
-									| _ ->			raise (DIFFERENT_TYPE_OPERATION ("Exec:Free["^(string_of_value d)^"]"))
+									| _ ->			raise (Different_type_operation ("Exec:Free["^(string_of_value d)^"]"))
 						)
 
 (* execution of subprograms *)
@@ -424,7 +437,7 @@ and exec_proc (id:ide) (input_values:value list) (r:env) (s:store) (h:heap) =
 		r#pop								(* Trash the nested environment *)
 	) in match r#get id with
 		  Descr_Prcd(params,locals,cmds) ->	do_exec params locals cmds input_values r s h
-		| _ ->								raise (SYNTAX "Exec_proc: Not a Descr_Procedure")
+		| _ ->								raise (Syntax "Exec_proc: Not a Descr_Procedure")
 
 
 (* evaluation of programs *)

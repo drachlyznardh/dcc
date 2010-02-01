@@ -37,7 +37,7 @@ class heap size = object (self)
 					  												Hashtbl.replace htbl l (HEntry(c,v))
 					| (ValueFloat(_),HEntry(c,ValueFloat(_))) ->	Hashtbl.remove htbl l;
 																	Hashtbl.replace htbl l (HEntry(c,v))
-					| _ ->											raise (DIFFERENT_TYPE_ASSIGNATION "heap#set")
+					| _ ->											raise (Different_type_assignation "heap#set")
 			)
 		) with Not_found -> Hashtbl.replace htbl l (HEntry(0,v));
 	)

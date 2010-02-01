@@ -1,6 +1,6 @@
 program
 
-   var x : float;
+   var x : int;
 
    var y : int;
    var z : int;
@@ -10,7 +10,7 @@ program
 
 begin
 
-   x := 404.03456789;
+   x := 42;
    p := @x;
    q := @p;
    r := @q;

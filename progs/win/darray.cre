@@ -15,7 +15,7 @@ begin
 	write (z);
 
 	x := malloc(array[3 .. 4] of int);
-	y := malloc(array[0 .. 7] of float);
+	y := malloc(array[0 .. 7] of int);
 
 	write (x);
 	write (y);

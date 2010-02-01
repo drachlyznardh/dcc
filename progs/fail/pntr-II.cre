@@ -1,0 +1,14 @@
+program
+
+   var x : array[0 .. 1] of float;
+   var p : ^int;
+
+begin
+
+   x[0] := 404.03456789;
+   p := @x;	$ different type assignation $
+
+   write(x);
+   write(p);
+
+end

@@ -1,0 +1,9 @@
+program
+
+	var p : ^float;
+
+begin
+
+	p := malloc (array[0 .. 42] of int);
+
+end

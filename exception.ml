@@ -6,21 +6,19 @@ exception Env_404			of string	(* Environment entry not found *)
 exception Store_404			of string	(* Store entry not found *)
 exception Heap_404			of string	(* Heap entry not found *)
 
-exception SYNTAX						of string
+exception Syntax						of string
 
 (* Indexes *)
-exception INDEX_OUT_OF_BOUNDS			of string
-exception NOT_INTEGER_INDEX				of string
+exception Index_out_of_bounds			of string
+exception Not_integer_index				of string
 
 (* Do not mess with different types *)
-exception DIFFERENT_TYPE_OPERATION		of string
-exception DIFFERENT_TYPE_ASSIGNATION	of string
-exception DIFFERENT_TYPE_POINTER		of string
+exception Different_type_operation		of string
+exception Different_type_assignation	of string
+exception Different_type_pointer		of string
 
-exception POINTER_ARITHMETIC			of string
-exception PARAMETERS_DO_NOT_MATCH		of string
-
-exception NOT_YET_IMPLEMENTED 			of string	(* LOL, still to be done... *)
+exception Pointer_arithmetic			of string
+exception Parameters_do_not_match		of string
 
 (* Pointer exceptions *)
 exception Not_a_pointer		of string	(* While calculating pointer's depth *)
