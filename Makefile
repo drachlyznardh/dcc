@@ -6,8 +6,9 @@ DEP  := ocamldep
 
 APP  := interpreter
 
-MLS = syntaxtree.ml parser.ml lexer.ml exception.ml types.ml common.ml mem.ml interpreter.ml main.ml
-CMOS = $(MLS:.ml=.cmo)
+MLS  := syntaxtree.ml parser.ml lexer.ml exception.ml types.ml common.ml \
+        env.ml store.ml heap.ml interpreter.ml main.ml
+CMOS := $(MLS:.ml=.cmo)
 
 eval: $(CMOS)
 	$(CC) -o $(APP) $(CMOS)

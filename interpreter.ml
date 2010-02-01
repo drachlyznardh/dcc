@@ -7,7 +7,10 @@ open Syntaxtree;;
 open Types;;
 open Exception;;
 open Common;;
-open Mem;;
+
+open Env;;
+open Store;;
+open Heap;;
 
 (******************************)
 
